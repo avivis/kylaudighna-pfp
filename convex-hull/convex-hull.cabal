@@ -25,7 +25,9 @@ source-repository head
 
 library
   exposed-modules:
+      GrahamScan
       Lib
+      QuickHull
   other-modules:
       Paths_convex_hull
   autogen-modules:
