@@ -9,6 +9,8 @@ crossProduct (Point2D px py) (Line2D (Point2D x0 y0) (Point2D x1 y1)) = (x0 - px
 
 -- TODO: Make a dimension-agnostic QuickHull
 
+-- TODO: Create partition before calling quickHull_
+-- TODO: Handle collinear points (>=0, filter out p0) 
 quickHull_ :: [Point2D] -> Line2D -> [Point2D]
 quickHull_ points l@(Line2D p0 p1) =
   let pointsDists = [(p, crossProduct p l) | p <- points]
