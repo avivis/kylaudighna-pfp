@@ -16,6 +16,7 @@ sorting=ynt
 
 \addbibresource{convex_hull.bib}
 \nocite{*}
+
 \author{Claudia Cortell (ccc2223), Kyle Edwards (kje2115), and Avighna Suresh (as6469)}
 \title{Parallel Convex Hull : Project Proposal}
 
@@ -29,13 +30,13 @@ sorting=ynt
 \section{Motivation}
 
 
-Given a set P of n points in a plane, the convex hull of P is the smallest convex polygon containing the points and the largest convex polygon whose vertices are points in P. Finding the convex hull of a set of points has many applications in various fields, some of the more notable examples being generating simplified 3D meshes, performing collision detection between complicated objects, extracting shapes for image processing, and pathfinding. 
+Given a set P of n points in a plane, the convex hull of P is the smallest convex polygon containing the points and the largest convex polygon whose vertices are points in P. Finding the convex hull of a set of points has many applications in various fields, some of the more notable examples being generating simplified 3D meshes, performing collision detection between complicated objects, extracting shapes for image processing, and pathfinding.
 
 \begin{figure}[h]
-  \centering
-  \includegraphics[width=0.5\textwidth]{convex_hull.png}
-  \caption{a good analogy for a 2d convex hull is to imagine a rubber band
-  enveloping the points.}
+	\centering
+	\includegraphics[width=0.5\textwidth]{convex_hull.png}
+	\caption{a good analogy for a 2d convex hull is to imagine a rubber band
+		enveloping the points.}
 \end{figure}
 
 Due to the large number of use cases for convex hulls and the relative lack of already existing parallel algorithms for the problem, our project aims to parallelize an existing convex hull algorithm. Specifically, we aim to implement both a sequential and parallel convex hull algorithm in order to compare the increase in speed that parallelization would provide.
@@ -91,17 +92,17 @@ For the algorithm we plan to parallelize, we have two algorithms we want to para
 The Quickhull algorithm is a divide-and-conquer algorithm that recursively partitions the points, removing points that cannot lie on the convex hull with each recursive step. More specifically, the algorithm finds the maximum and minimum points based on their $x$ value, draws a line between them, partitions the points based on which side of the line they lie on, figures out the two points on each side furthest from the line, draws a triangle between that furthest point and the line, removes all points within the triangle, and recurses using the two lines drawn to create the triangle. The time complexity of Quickhull is $O(n \log n)$ when run sequentially, though in the worst-case scenario it has a runtime of $O(n^2)$.
 
 \begin{figure}[h]
-  \centering
-  \includegraphics[width=0.75\textwidth]{quickhull.png}
-  \caption{A visual representation of the Quickhull steps described previously.}
+	\centering
+	\includegraphics[width=0.75\textwidth]{quickhull.png}
+	\caption{A visual representation of the Quickhull steps described previously.}
 \end{figure}
 
 Chan’s algorithm is faster than both Quickhull and Graham scan, as it has a time complexity of O(n log h) rather than O(n log n). Similar to Quickhull, the algorithm uses divide-and-conquer: the points are first partitioned into K subsets with m elements each, the convex hull of each subset is found using any $O(n log n)$ convex hull algorithm (we will likely use Quickhull, as unlike Graham Scan, Quickhull can be extended to more than two dimensions), and finally the convex hull of each subset is merged into a final convex hull. The trick lies in how that merging takes place, as it uses a modified version of the gift-wrapping algorithm that only iterates through points that are part of the convex hulls of the subsets.
 
 \begin{figure}[h]
-  \centering
-  \includegraphics[width=0.5\textwidth]{chans.png}
-  \caption{An example of a set split into subsets for Chan's algorithm. Notice that the subsets can have overlapping convex hulls.}
+	\centering
+	\includegraphics[width=0.5\textwidth]{chans.png}
+	\caption{An example of a set split into subsets for Chan's algorithm. Notice that the subsets can have overlapping convex hulls.}
 \end{figure}
 
 \subsection*{Quickhull Code}
@@ -137,9 +138,9 @@ def quick_hull(points):
 
 Due to its nature as a divide-and-conquer algorithm, parallelization of the Quickhull algorithm will not be too difficult. The simplest approach to parallelization is to perform Quickhull sequentially until there are $K$ lines, then assigning each thread one of the $K$ lines to continue with. The two main issues with this approach are figuring out the optimal value of $K$, and figuring out schemes for load balancing, as there is no guarantee that the number of points each thread will be assigned will be equal. In the best case scenario, $m$ points would be assigned to each thread. The sequential component has a time complexity of $O(n\log k)$, and the parallel component has an average time complexity of $O(m \log m)$, meaning together the total time complexity should be around $O(n \log n - m(K - 1)\log m)$. This suggests that, beyond just improving performance, parallelism using the method described is also less time complex!
 
-Parallelization of Chan’s algorithm is, surprisingly, somewhat easier than it is with Quickhull: we can just assign the task of finding the convex hull of one of the $K$ subsets to a thread each. The largest issue we will run into will be, again, figuring out the optimal value of $m$, which also affects the optimal value of $K$. One suggested method we found is the so-called squaring method: at each recursive iteration $t$ of the algorithm (we previously only described one iteration of the algorithm, but for larger sets we can perform multiple), we choose $m = \text{min}(n, 2^(2^t))$. This results in a maximum depth of $\log(\log(h))$, which altogether results in a time complexity of $O(n\log h)$. Our implementation will use this value of $m$, although it’s unlikely that we will have experiments with more than one iteration, meaning that $m$ will equal 4 in most situations. We will also experiment with other values of $m$, if time permits. Using the Master Theorem, we can conclude that the time complexity of the parallel approach is $O(Kh\log m)$, which for cases where $h \leq m$ gives us a slightly better time complexity than the $O(n\log h)$ time complexity of the sequential version.
+Parallelization of Chan’s algorithm is, surprisingly, somewhat easier than it is with Quickhull: we can just assign the task of finding the convex hull of one of the $K$ subsets to a thread each. The largest issue we will run into will be, again, figuring out the optimal value of $m$, which also affects the optimal value of $K$. One suggested method we found is the so-called squaring method: at each recursive iteration $t$ of the algorithm (we previously only described one iteration of the algorithm, but for larger sets we can perform multiple), we choose $m = \text{min}(n, 2^{2^t})$. This results in a maximum depth of $\log(\log(h))$, which altogether results in a time complexity of $O(n\log h)$. Our implementation will use this value of $m$, although it’s unlikely that we will have experiments with more than one iteration, meaning that $m$ will equal 4 in most situations. We will also experiment with other values of $m$, if time permits. Using the Master Theorem, we can conclude that the time complexity of the parallel approach is $O(Kh\log m)$, which for cases where $h \leq m$ gives us a slightly better time complexity than the $O(n\log h)$ time complexity of the sequential version.
 
-	On the Haskell side, we will use the Par monad and Strategies in order to parallelize our algorithm. We may also play around with using REPA for Quickhull, as finding the points that lie within a triangle appears to be a good place to use REPA. For input data, we’ll just generate some random points and write them to a file, then read from that file so that we can produce equal test cases. If time permits, we also plan on rendering the resulting convex hull, though this may not necessarily be done in Haskell.
+On the Haskell side, we will use the Par monad and Strategies in order to parallelize our algorithm. We may also play around with using REPA for Quickhull, as finding the points that lie within a triangle appears to be a good place to use REPA. For input data, we’ll just generate some random points and write them to a file, then read from that file so that we can produce equal test cases. If time permits, we also plan on rendering the resulting convex hull, though this may not necessarily be done in Haskell.
 
 \nocite{*}
 \printbibliography
