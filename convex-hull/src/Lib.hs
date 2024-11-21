@@ -8,5 +8,3 @@ module Lib (
 data Point2D = Point2D Double Double deriving (Show)
 data Line2D = Line2D Point2D Point2D deriving (Show)
 
--- someFunc :: IO ()
--- someFunc = putStrLn "someFunc"
