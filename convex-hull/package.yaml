@@ -48,6 +48,7 @@ executables:
       - convex-hull
       - random
 
+
 tests:
   convex-hull-test:
     main: Spec.hs
