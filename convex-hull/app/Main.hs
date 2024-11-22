@@ -1,17 +1,16 @@
 module Main (main) where
 
---
--- import Lib
---
--- main :: IO ()
--- main = someFunc
-
 import Lib
 import QuickHull (quickHull)
+import GrahamScan (grahamScan)
+import ParallelQuickHull (quickHullPar)
 import System.Random
 
 randomDouble :: Int -> [Double]
 randomDouble seed = randoms (mkStdGen seed) :: [Double]
+
+randomInt :: Int -> [Int]
+randomInt seed = randoms (mkStdGen seed) :: [Int]
 
 odds :: [a] -> [a]
 odds [] = []
@@ -23,12 +22,28 @@ evens [] = []
 evens [_] = []
 evens (_ : x : xs) = x : evens xs
 
-testConvexHullFn :: ([Point2D] -> [Point2D]) -> Int -> Int -> [Point2D]
-testConvexHullFn f seed n =
-  let randomVals = take (2 * n) $ randomDouble seed
-      points = zipWith Point2D (odds randomVals) (evens randomVals)
-   in f points
+generateDoublePoints :: Int -> Int -> [Point2D]
+generateDoublePoints seed n =
+    let randomVals = take (2 * n) $ randomDouble seed
+      in zipWith Point2D (odds randomVals) (evens randomVals)
+
+generateIntPoints :: Int -> Int -> [Point2D]
+generateIntPoints seed n =
+    let randomVals = take (2 * n) $ randomInt seed
+        scale x = fromIntegral (x `mod` 21) -- points between (0,0) and (20,20)
+      in zipWith Point2D (map scale $ odds randomVals) (map scale $ evens randomVals)
+
+testConvexHullFn :: ([Point2D] -> [Point2D]) -> [Point2D] -> [Point2D]
+testConvexHullFn f points = f points
 
 main :: IO ()
 main = do
-  print $ testConvexHullFn quickHull 3 65536
+    let points = generateDoublePoints 3 5000
+    putStrLn "Original points:"
+    -- mapM_ print points
+
+    -- let hull = testConvexHullFn quickHull points
+    -- let hull = testConvexHullFn grahamScan points
+    let hull = testConvexHullFn quickHullPar points
+    putStrLn "\nHull points:"
+    mapM_ print hull 

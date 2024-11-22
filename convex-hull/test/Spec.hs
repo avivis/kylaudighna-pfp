@@ -64,14 +64,16 @@ compareQuickHull n = do
   
   -- for comparing time
   seqTime <- timeFunction quickHull points
-  putStrLn $ "sequential time: " ++ printf "%.3f" seqTime ++ " ms"
+  putStrLn $ "sequential time: " ++ printf "%.4f" seqTime ++ " ms"
   parTime <- timeFunction quickHullPar points
-  putStrLn $ "parallel time:   " ++ printf "%.3f" parTime ++ " ms"
+  putStrLn $ "parallel time:   " ++ printf "%.4f" parTime ++ " ms"
   let speedup = seqTime / parTime
   putStrLn $ "speedup:        " ++ printf "%.2f" speedup ++ "x"
 
 main :: IO ()
 main = do
+  compareQuickHull 512
   compareQuickHull 1024
   compareQuickHull 4096
   compareQuickHull 16384
+  compareQuickHull 65536

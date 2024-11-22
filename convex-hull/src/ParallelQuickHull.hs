@@ -3,6 +3,7 @@
 module ParallelQuickHull (quickHullPar) where
 import Control.Parallel
 import Control.Parallel.Strategies
+import Control.DeepSeq
 import Data.List (nub, maximumBy, minimumBy)
 import Lib (Line2D (Line2D), Point2D (Point2D))
 
@@ -16,18 +17,28 @@ quickHullPar_ points l@(Line2D p0 p1)
   | length rightOfLine < 2 = p0 : rightOfLine
   | otherwise = 
       let maxPoint = (fst . maximumBy (\(_, x) (_, y) -> compare x y)) rightOfLineDists
-          (!leftResult, !rightResult) = 
+          (leftResult, rightResult) = 
             runEval $ do
-              left <- rpar $ quickHullPar_ rightOfLine (Line2D p0 maxPoint)
-              right <- rpar $ quickHullPar_ rightOfLine (Line2D maxPoint p1)
+              left <- rpar (force (quickHullPar_ rightOfLine (Line2D p0 maxPoint)))
+              right <- rpar (force (quickHullPar_ rightOfLine (Line2D maxPoint p1)))
               rseq left
               rseq right
               return (left, right)
-      in nub $ p0 : maxPoint : (leftResult ++ rightResult)
+      in leftResult ++ rightResult
   where 
     pointsDists = [(p, crossProduct p l) | p <- points]
     rightOfLineDists = filter ((> 0) . snd) pointsDists
     rightOfLine = map fst rightOfLineDists
+-- quickHull_ :: [Point2D] -> Line2D -> [Point2D]
+-- quickHull_ points l@(Line2D p0 p1) =
+--   let pointsDists = [(p, crossProduct p l) | p <- points]
+--       rightOfLineDists = filter ((> 0) . snd) pointsDists
+--       rightOfLine = map fst rightOfLineDists
+--    in if length rightOfLineDists < 2
+--         then p0 : rightOfLine
+--         else
+--           let maxPoint = (fst . maximumBy (\(_, x) (_, y) -> compare x y)) rightOfLineDists
+--            in quickHull_ rightOfLine (Line2D p0 maxPoint) ++ quickHull_ rightOfLine (Line2D maxPoint p1)
 
 quickHullPar :: [Point2D] -> [Point2D]
 quickHullPar [] = []
@@ -37,11 +48,11 @@ quickHullPar points =
       maxXPoint = maximumBy cmpX points
       minXPoint = minimumBy cmpX points
       
-      (!leftHull, !rightHull) = 
+      (leftHull, rightHull) = 
         runEval $ do
-          left <- rpar $ quickHullPar_ points (Line2D minXPoint maxXPoint)
-          right <- rpar $ quickHullPar_ points (Line2D maxXPoint minXPoint)
+          left <- rpar (force (quickHullPar_ points (Line2D minXPoint maxXPoint)))
+          right <- rpar (force (quickHullPar_ points (Line2D maxXPoint minXPoint)))
           rseq left
           rseq right
           return (left, right)
-  in nub $ [minXPoint, maxXPoint] ++ leftHull ++ rightHull
+  in leftHull ++ rightHull
