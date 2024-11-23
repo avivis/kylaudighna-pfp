@@ -21,6 +21,8 @@ description: Please see the README on GitHub at <https://github.com/githubuser/c
 
 dependencies:
   - base >= 4.7 && < 5
+  - parallel
+  - deepseq
 
 ghc-options:
   - -Wall
@@ -47,7 +49,6 @@ executables:
     dependencies:
       - convex-hull
       - random
-
 
 tests:
   convex-hull-test:
