@@ -6,34 +6,29 @@ module Main (main) where
 -- main :: IO ()
 -- main = someFunc
 
+import Chans (giftWrapping)
 import GrahamScan (grahamScan)
-import Lib
-import QuickHull (quickHull, quickHullPar)
+import Linear.V2
+import QuickHull (quickHull2, quickHullPar2)
 import System.Random
 
-randomDouble :: Int -> [Double]
-randomDouble seed = randoms (mkStdGen seed) :: [Double]
-
-randomPoints :: Int -> [Point2D]
-randomPoints seed =
-  let randomVals = randomDouble seed
-   in zipWith Point2D (odds randomVals) (evens randomVals)
-
-odds :: [a] -> [a]
-odds [] = []
-odds [x] = [x]
-odds (x : _ : xs) = x : odds xs
-
-evens :: [a] -> [a]
-evens [] = []
-evens [_] = []
-evens (_ : x : xs) = x : evens xs
+randomV2s :: (RandomGen g, Random a) => g -> [V2 a]
+randomV2s gen =
+  let (x, gen') = random gen
+      (y, gen'') = random gen'
+   in V2 x y : randomV2s gen''
 
 main :: IO ()
 main = do
-  let points = take 65536 $ randomPoints 3
-  -- let points = take 1048576 $ randomPoints 3
-  -- print $ quickHull (take 2 points)
-  print $ grahamScan points
-  print $ quickHull points
-  print $ quickHullPar points
+  let vecs = take 1048576 $ randomV2s (mkStdGen 3) :: [V2 Double]
+      grahamScanResults = grahamScan vecs
+      quickHullResults = quickHull2 vecs
+      quickHullParResults = quickHullPar2 vecs
+  print ""
+  print grahamScanResults
+  print quickHullResults
+  print quickHullParResults
+
+-- let points = take 65536 $ randomPoints 3
+-- let points = take 1048576 $ randomPoints 3
+-- print $ quickHull (take 2 points)
