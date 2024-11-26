@@ -1,24 +1,21 @@
 module Lib (
-  Point2D (Point2D),
-  crossProduct2D,
-  squareDist2D,
+  comparePointsPolar,
+  sortPointsCCW,
+  isCCWTurn,
 ) where
 
-import Control.DeepSeq (NFData, rnf)
+import Data.List (sortBy)
+import Linear.Metric (distance)
+import Linear.V2 (V2, crossZ)
 
--- TODO: Turn point and line into classes so we can easily switch between 2D and 3D
+isCCWTurn :: (Ord a, Floating a) => V2 a -> V2 a -> V2 a -> Bool
+isCCWTurn o p1 p2 = crossZ (p1 - o) (p2 - o) >= 0
 
--- ! means evaluate to WHNF, we want that for Vectors
-data Point2D = Point2D Double Double deriving (Eq)
+comparePointsPolar :: (Ord a, Floating a) => V2 a -> V2 a -> V2 a -> Ordering
+comparePointsPolar o p1 p2 = compare (crossZ (p1 - o) (p2 - o)) 0 <> compare (distance o p1) (distance o p2)
 
-instance Show Point2D where
-  show (Point2D x y) = "(" ++ show x ++ ", " ++ show y ++ ")"
-
-instance NFData Point2D where
-  rnf p = seq p ()
-
-crossProduct2D :: Point2D -> Point2D -> Point2D -> Double
-crossProduct2D (Point2D x0 y0) (Point2D x1 y1) (Point2D x2 y2) = (x0 - x2) * (y1 - y2) - (y0 - y2) * (x1 - x2)
-
-squareDist2D :: Point2D -> Point2D -> Double
-squareDist2D (Point2D x0 y0) (Point2D x1 y1) = (x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)
+sortPointsCCW :: (Ord a, Floating a) => [V2 a] -> [V2 a]
+sortPointsCCW [] = []
+sortPointsCCW ps =
+  let o = minimum ps -- o is the minimum with respect to x, then to y
+   in o : (sortBy (comparePointsPolar o) . filter (/= o)) ps

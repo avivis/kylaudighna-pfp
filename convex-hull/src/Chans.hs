@@ -1,35 +1,54 @@
-module Chans (chans, giftWrapping) where
+module Chans (chans2, chans2Par) where
 
+import Control.Parallel.Strategies
 import Data.List (minimumBy)
+import Data.List.Split (divvy)
+import qualified Data.Vector as V
+import GHC.Float.RealFracMethods (floorFloatInt)
+import GrahamScan (grahamScan)
+import Lib (comparePointsPolar)
+import Linear.V2 (V2)
+import QuickHull (quickHull2)
 
-import Lib (Point2D (Point2D), crossProduct2D, squareDist2D)
-
-giftWrapping :: [Point2D] -> [Point2D]
-giftWrapping [] = []
-giftWrapping p@[_] = p
-giftWrapping p@[_, _] = p
-giftWrapping p@[_, _, _] = p
-giftWrapping points = giftWrapping_ start []
- where
-  start = minimumBy (\(Point2D ax _) (Point2D bx _) -> compare ax bx) points
-  giftWrapping_ curr hullPoints
-    | next == start = hullPoints
-    | otherwise = giftWrapping_ next (next : hullPoints)
-   where
-    next = leftmostPoint (tail points) (head points)
-    leftmostPoint [] leftmost = leftmost
-    leftmostPoint (check : rest) leftmost
-      | check == curr = leftmostPoint rest leftmost
-      | cross < 0 = leftmostPoint rest leftmost
-      | cross > 0 = leftmostPoint rest check
-      | otherwise = leftmostPoint rest (if squareDist2D curr check < squareDist2D curr leftmost then check else leftmost)
-     where
-      cross = crossProduct2D curr leftmost check
+jarvisMarch2 :: (Ord a, Floating a) => [V2 a] -> [V2 a]
+jarvisMarch2 [] = []
+jarvisMarch2 p@[_] = p
+jarvisMarch2 p@[_, _] = p
+jarvisMarch2 p@[_, _, _] = p
+jarvisMarch2 points =
+  let start = minimum points
+      _jarvisMarch p =
+        let next = (minimumBy (comparePointsPolar p) . filter (/= p)) points
+         in if next == start then [p] else p : _jarvisMarch next
+   in _jarvisMarch start
 
 -- chans :: ([Point2D] -> [Point2D]) -> [Point2D] -> [Point2D]
 -- chans _ [] = []
 -- chans _ p@[_] = p
 -- chans _ p@[_, _] = p
 -- chans _ p@[_, _, _] = p
-chans :: [Point2D] -> [Point2D]
-chans _ = []
+chans2 :: (Ord a, Floating a) => [V2 a] -> [V2 a]
+chans2 ps = _chans2 (1 :: Int)
+ where
+  _chans2 t
+    | expectedWrapTime > m = _chans2 (t + 1)
+    | otherwise = (quickHull2 . concatMap V.toList) subPointsHulls
+   where
+    m = (2 :: Int) ^ (2 :: Int) ^ t
+    subPoints = divvy m m ps
+    subPointsHulls = map (V.fromList . grahamScan) subPoints
+    l = sum $ map V.length subPointsHulls
+    expectedWrapTime = l * (floorFloatInt . logBase 2.0 . fromIntegral) l
+
+chans2Par :: (RealFloat a, NFData a) => [V2 a] -> [V2 a]
+chans2Par ps = _chans2 (1 :: Int)
+ where
+  _chans2 t
+    | expectedWrapTime > m = _chans2 (t + 1)
+    | otherwise = jarvisMarch2 subPointsHulls
+   where
+    m = (2 :: Int) ^ (2 :: Int) ^ t
+    subPoints = divvy m m ps
+    subPointsHulls = concat $ parMap rdeepseq quickHull2 subPoints
+    l = length subPointsHulls
+    expectedWrapTime = l * (floorFloatInt . logBase 2.0 . fromIntegral) l
