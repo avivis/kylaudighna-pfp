@@ -18,4 +18,4 @@ sortPointsCCW :: (Ord a, Floating a) => [V2 a] -> [V2 a]
 sortPointsCCW [] = []
 sortPointsCCW ps =
   let o = minimum ps -- o is the minimum with respect to x, then to y
-   in o : (sortBy (comparePointsPolar o) . filter (/= o)) ps
+   in o : (sortBy (flip $ comparePointsPolar o) . filter (/= o)) ps

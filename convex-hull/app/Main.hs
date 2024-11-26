@@ -1,50 +1,39 @@
 module Main (main) where
 
-main :: IO ()
-main = print "Main"
+import Chans (chans2, chans2Par)
+import GrahamScan (grahamScan)
+import Linear.V2 (V2 (V2))
 
--- import Lib
--- import QuickHull (quickHull)
--- import GrahamScan (grahamScan)
--- import System.Random
---
--- randomDouble :: Int -> [Double]
--- randomDouble seed = randoms (mkStdGen seed) :: [Double]
---
--- randomInt :: Int -> [Int]
--- randomInt seed = randoms (mkStdGen seed) :: [Int]
---
--- odds :: [a] -> [a]
--- odds [] = []
--- odds [x] = [x]
--- odds (x : _ : xs) = x : odds xs
---
--- evens :: [a] -> [a]
--- evens [] = []
--- evens [_] = []
--- evens (_ : x : xs) = x : evens xs
---
--- generateDoublePoints :: Int -> Int -> [Point2D]
--- generateDoublePoints seed n =
---     let randomVals = take (2 * n) $ randomDouble seed
---       in zipWith Point2D (odds randomVals) (evens randomVals)
---
--- generateIntPoints :: Int -> Int -> [Point2D]
--- generateIntPoints seed n =
---     let randomVals = take (2 * n) $ randomInt seed
---         scale x = fromIntegral (x `mod` 21) -- points between (0,0) and (20,20)
---       in zipWith Point2D (map scale $ odds randomVals) (map scale $ evens randomVals)
---
--- testConvexHullFn :: ([Point2D] -> [Point2D]) -> [Point2D] -> [Point2D]
--- testConvexHullFn f points = f points
---
--- main :: IO ()
--- main = do
---     let points = generateIntPoints 3 40
---     putStrLn "Original points:"
---     mapM_ print points
---
---     -- let hull = testConvexHullFn quickHull points
---     let hull = testConvexHullFn grahamScan points
---     putStrLn "\nHull points:"
---     mapM_ print hull
+-- import Linear.V3 (V3 (V3))
+
+import Lib (isCCWTurn, sortPointsCCW)
+import QuickHull (quickHull2, quickHull2Par)
+import System.Random
+
+randomV2s :: (RandomGen g, Random a) => g -> [V2 a]
+randomV2s gen =
+  let (x, gen') = random gen
+      (y, gen'') = random gen'
+   in V2 x y : randomV2s gen''
+
+-- randomV3s :: (RandomGen g, Random a) => g -> [V3 a]
+-- randomV3s gen =
+--   let (x, gen') = random gen
+--       (y, gen'') = random gen'
+--       (z, gen''') = random gen''
+--    in V3 x y z : randomV3s gen'''
+
+main :: IO ()
+main = do
+  -- let points = take 8 $ map (*100) $ randomV2s (mkStdGen 3) :: [V2 Double]
+  let points = take 1048576 $ map (*100) $ randomV2s (mkStdGen 3) :: [V2 Double]
+  -- assert (verifyConvexHull2Algorithm points grahamScan) return ()
+  --
+  -- assert (verifyConvexHull2Algorithm points quickHull2) return ()
+  -- print points
+  -- print $ grahamScan points
+  print $ quickHull2 points
+  print $ quickHull2Par points
+  --
+  -- assert (verifyConvexHull2Algorithm points chans2) return ()
+  -- assert (verifyConvexHull2Algorithm points chans2Par) return ()

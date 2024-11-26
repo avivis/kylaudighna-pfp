@@ -12,14 +12,14 @@ import Linear.V3 (R3 (_z), V3 (..), cross)
 -- TODO: Handle collinear points (>=0, filter out p0)
 
 _quickHull2 :: (Num a, Ord a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
-_quickHull2 ps p0 p1
+_quickHull2 points p0 p1
   | null onLeft = [p0]
-  | otherwise =
-      let pm = fst $ maximumBy (compare `on` snd) onLeftDists
-        in _quickHull2 onLeft p0 pm ++ _quickHull2 onLeft pm p1
-  where
-  onLeftDists = filter ((>= 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
+  | otherwise = _quickHull2 onLeft p0 pm ++ _quickHull2 onLeft pm p1
+ where
+  onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- points]
   onLeft = map fst onLeftDists
+  pm = fst $ maximumBy (compare `on` snd) onLeftDists
+
 -- Any shape with < 4 points is automatically its own convex hull, as it takes 3 points to make a 2D simplex
 -- Pattern matching is probably faster than length...
 quickHull2 :: (Num a, Ord a) => [V2 a] -> [V2 a]
@@ -40,13 +40,12 @@ quickHull2 points =
 
 _quickHull2Par :: (Num a, Ord a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
 _quickHull2Par ps p0 p1
-  | null pointsOnLeft = [p0]
-  | otherwise =
-      let pm = fst $ maximumBy (compare `on` snd) onLeftDists
-        in _quickHull2Par pointsOnLeft p0 pm ++ _quickHull2Par pointsOnLeft pm p1
-  where
-  onLeftDists = filter ((>= 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
-  pointsOnLeft = map fst onLeftDists
+  | null onLeft = [p0]
+  | otherwise = _quickHull2Par onLeft p0 pm ++ _quickHull2Par onLeft pm p1
+ where
+  onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
+  onLeft = map fst onLeftDists
+  pm = fst $ maximumBy (compare `on` snd) onLeftDists
 
 quickHull2Par :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
 quickHull2Par [] = []

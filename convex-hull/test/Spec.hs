@@ -17,17 +17,12 @@ import Lib (isCCWTurn, sortPointsCCW)
 import QuickHull (quickHull2, quickHull2Par)
 import System.Random
 
-verifyHull2 :: (RealFloat a) => [V2 a] -> Bool
-verifyHull2 [] = True
-verifyHull2 [_] = True
-verifyHull2 [_, _] = True
-verifyHull2 [_, _, _] = True
-verifyHull2 hull =
-  let sortedHull = sortPointsCCW hull
-      _verifyHull2 [] = True
-      _verifyHull2 [_] = True
-      _verifyHull2 (a : rest@(b : _)) = all (isCCWTurn a b) hull && _verifyHull2 rest
-   in _verifyHull2 sortedHull
+verifyConvexHull2Algorithm :: (RealFloat a) => [V2 a] -> ([V2 a] -> [V2 a]) -> Bool
+verifyConvexHull2Algorithm ps f =
+  let verifyCCWHull2 [] = True
+      verifyCCWHull2 [_] = True
+      verifyCCWHull2 (a : rest@(b : _)) = all (isCCWTurn a b) ps && verifyCCWHull2 rest
+   in (verifyCCWHull2 . sortPointsCCW . f) ps
 
 randomV2s :: (RandomGen g, Random a) => g -> [V2 a]
 randomV2s gen =
@@ -44,11 +39,11 @@ randomV2s gen =
 
 main :: IO ()
 main = do
-  let points = take 2097152 $ randomV2s (mkStdGen 3) :: [V2 Double]
-  assert (verifyHull2 (grahamScan points)) return ()
-
-  assert (verifyHull2 (quickHull2 points)) return ()
-  assert (verifyHull2 (quickHull2Par points)) return ()
-
-  assert (verifyHull2 (chans2 points)) return ()
-  assert (verifyHull2 (chans2Par points)) return ()
+  let points = take 65536 $ randomV2s (mkStdGen 3) :: [V2 Double]
+  assert (verifyConvexHull2Algorithm points grahamScan) return ()
+  --
+  assert (verifyConvexHull2Algorithm points quickHull2) return ()
+  assert (verifyConvexHull2Algorithm points quickHull2Par) return ()
+  --
+  assert (verifyConvexHull2Algorithm points chans2) return ()
+  assert (verifyConvexHull2Algorithm points chans2Par) return ()
