@@ -1,4 +1,4 @@
-module QuickHull (quickHull2, quickHullPar2) where
+module QuickHull (quickHull2, quickHullPar2, quickHullPar) where
 
 import Control.DeepSeq (NFData, force)
 import Control.Lens ((^.))
@@ -81,3 +81,48 @@ quickHullPar2 points =
         _ <- rseq bottomLeft
         return (topLeft, topRight, bottomLeft, bottomRight)
    in topLeftHull ++ topRightHull ++ bottomLeftHull ++ bottomRightHull
+
+
+
+
+quickHullPar_ :: [V2 Double] -> (V2 Double, V2 Double) -> Int -> [V2 Double]
+quickHullPar_ points (p0, p1) depth
+  | null rightOfLine = []
+  | length rightOfLine < 2 = [p0] ++ rightOfLine
+  | otherwise =
+      let maxPoint = fst $ maximumBy (\(_, x) (_, y) -> compare x y) rightOfLineDists
+          (leftResult, rightResult) =
+            if depth > 0
+              then
+                runEval $ do
+                  left <- rpar (force (quickHullPar_ rightOfLine (p0, maxPoint) (depth - 1)))
+                  right <- rpar (force (quickHullPar_ rightOfLine (maxPoint, p1) (depth - 1)))
+                  _ <- rseq left
+                  _ <- rseq right
+                  return (left, right)
+              else
+                ( quickHullPar_ rightOfLine (p0, maxPoint) (depth),
+                  quickHullPar_ rightOfLine (maxPoint, p1) (depth)
+                )
+      in leftResult ++ rightResult
+  where
+    pointsDists = [(p, crossZ (p1 - p0) (p - p0)) | p <- points]
+    rightOfLineDists = filter ((> 0) . snd) pointsDists
+    rightOfLine = map fst rightOfLineDists
+
+quickHullPar :: [V2 Double] -> [V2 Double]
+quickHullPar [] = []
+quickHullPar [p] = [p]
+quickHullPar points =
+  let cmpX (V2 ax _) (V2 bx _) = compare ax bx
+      maxXPoint = maximumBy cmpX points
+      minXPoint = minimumBy cmpX points
+
+      (leftHull, rightHull) =
+        runEval $ do
+          left <- rpar (force (quickHullPar_ points (minXPoint, maxXPoint) 2))
+          right <- rpar (force (quickHullPar_ points (maxXPoint, minXPoint) 2))
+          _ <- rseq left
+          _ <- rseq right
+          return (left, right)
+  in leftHull ++ rightHull

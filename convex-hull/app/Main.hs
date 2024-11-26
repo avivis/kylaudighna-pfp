@@ -1,50 +1,39 @@
 module Main (main) where
 
-main :: IO ()
-main = print "Main"
+import Chans (giftWrapping)
+import GrahamScan (grahamScan)
+import Linear.V2
+import QuickHull (quickHull2, quickHullPar2, quickHullPar)
+import System.IO (readFile)
+import System.Random
+import Data.List.Split (splitOn)
 
--- import Lib
--- import QuickHull (quickHull)
--- import GrahamScan (grahamScan)
--- import System.Random
---
--- randomDouble :: Int -> [Double]
--- randomDouble seed = randoms (mkStdGen seed) :: [Double]
---
--- randomInt :: Int -> [Int]
--- randomInt seed = randoms (mkStdGen seed) :: [Int]
---
--- odds :: [a] -> [a]
--- odds [] = []
--- odds [x] = [x]
--- odds (x : _ : xs) = x : odds xs
---
--- evens :: [a] -> [a]
--- evens [] = []
--- evens [_] = []
--- evens (_ : x : xs) = x : evens xs
---
--- generateDoublePoints :: Int -> Int -> [Point2D]
--- generateDoublePoints seed n =
---     let randomVals = take (2 * n) $ randomDouble seed
---       in zipWith Point2D (odds randomVals) (evens randomVals)
---
--- generateIntPoints :: Int -> Int -> [Point2D]
--- generateIntPoints seed n =
---     let randomVals = take (2 * n) $ randomInt seed
---         scale x = fromIntegral (x `mod` 21) -- points between (0,0) and (20,20)
---       in zipWith Point2D (map scale $ odds randomVals) (map scale $ evens randomVals)
---
--- testConvexHullFn :: ([Point2D] -> [Point2D]) -> [Point2D] -> [Point2D]
--- testConvexHullFn f points = f points
---
--- main :: IO ()
--- main = do
---     let points = generateIntPoints 3 40
---     putStrLn "Original points:"
---     mapM_ print points
---
---     -- let hull = testConvexHullFn quickHull points
---     let hull = testConvexHullFn grahamScan points
---     putStrLn "\nHull points:"
---     mapM_ print hull
+-- randomV2s :: (RandomGen g, Random a) => g -> [V2 a]
+-- randomV2s gen =
+--   let (x, gen') = random gen
+--       (y, gen'') = random gen'
+--    in V2 x y : randomV2s gen''
+
+parseV2 :: String -> V2 Double
+parseV2 line =
+  let [x, y] = map read (splitOn " " line)
+   in V2 x y
+
+main :: IO ()
+main = do
+  contents <- readFile "points-60000.txt"
+  let vecs = map parseV2 (lines contents)
+--   let vecs = take 1048576 $ randomV2s (mkStdGen 3) :: [V2 Double]
+    --   grahamScanResults = grahamScan vecs
+    --   quickHullResults = quickHull2 vecs
+      quickHullParResults = quickHullPar2 vecs
+    --   quickHullPResults = quickHullPar vecs
+--   print ""
+--   print grahamScanResults
+--   print quickHullResults
+--   print quickHullPResults
+  print quickHullParResults
+
+-- let points = take 65536 $ randomPoints 3
+-- let points = take 1048576 $ randomPoints 3
+-- print $ quickHull (take 2 points)

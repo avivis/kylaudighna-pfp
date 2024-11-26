@@ -25,6 +25,7 @@ dependencies:
   - deepseq
   - lens
   - linear
+  - split
 
 ghc-options:
   - -Wall
