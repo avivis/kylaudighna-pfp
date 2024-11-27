@@ -2,7 +2,7 @@ module Main (main) where
 
 import GrahamScan (grahamScan)
 import Linear.V2
-import QuickHull (quickHull2, quickHull2Par)
+import QuickHull (quickHull2, quickHull2Par, quickHull2Par2way)
 import System.Environment (getArgs)
 import System.Random
 
@@ -24,5 +24,6 @@ main = do
         "grahamScan" -> print $ grahamScan vecs
         "quickHull" -> print $ quickHull2 vecs
         "quickHullPar" -> print $ quickHull2Par vecs
+        "quickHullPar2way" -> print $ quickHull2Par2way vecs
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull, or quickHullPar."
     _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"
