@@ -1,8 +1,8 @@
-module QuickHull (quickHull2, quickHullPar2, quickHullPar) where
+module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData, force)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (rpar, rseq, runEval)
+import Control.Parallel.Strategies (using, parList, rdeepseq)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy, partition)
 import Linear.Metric (dot)
@@ -58,71 +58,33 @@ quickHull2 points =
 
 -- Min X, min y, max X and max Y points all have to be part of the convex hull, so I do a 4-way
 -- parallel approach here
-quickHullPar2 :: (RealFloat a, NFData a) => [V2 a] -> [V2 a]
-quickHullPar2 [] = []
-quickHullPar2 p@[_] = p
-quickHullPar2 p@[_, _] = p
-quickHullPar2 p@[_, _, _] = p
-quickHullPar2 points =
-  let cmpX (V2 ax _) (V2 bx _) = compare ax bx
-      cmpY (V2 _ ay) (V2 _ by) = compare ay by
-      maxXPoint = maximumBy (compareVectorBy (^. _x)) points
-      minXPoint = minimumBy (compareVectorBy (^. _x)) points
-      maxYPoint = maximumBy (compareVectorBy (^. _y)) points
-      minYPoint = minimumBy (compareVectorBy (^. _y)) points
-      (topLeftHull, topRightHull, bottomRightHull, bottomLeftHull) = runEval $ do
-        topLeft <- rpar (force (quickHull2_ points minXPoint maxYPoint))
-        topRight <- rpar (force (quickHull2_ points maxYPoint maxXPoint))
-        bottomRight <- rpar (force (quickHull2_ points maxXPoint minYPoint))
-        bottomLeft <- rpar (force (quickHull2_ points minYPoint minXPoint))
-        _ <- rseq topLeft
-        _ <- rseq topRight
-        _ <- rseq bottomRight
-        _ <- rseq bottomLeft
-        return (topLeft, topRight, bottomLeft, bottomRight)
-   in topLeftHull ++ topRightHull ++ bottomLeftHull ++ bottomRightHull
+quickHull2Par :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
+quickHull2Par [] = []
+quickHull2Par p@[_] = p
+quickHull2Par p@[_, _] = p
+quickHull2Par p@[_, _, _] = p
+quickHull2Par points =
+  let maxDepth = 100 -- TODO: How do we determine maxDepth?
+      _quickHull2Par :: (Num a, Ord a, NFData a) => Int -> [V2 a] -> (V2 a, V2 a) -> [V2 a]
+      _quickHull2Par d ps (p0, p1)
+        | null onLeft = [p0]
+        | d < maxDepth = concat (map (_quickHull2Par (d + 1) onLeft) nextLines `using` parList rdeepseq)
+        | otherwise = concatMap(_quickHull2Par (d + 1) onLeft) nextLines
+       where
+        onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
+        onLeft = map fst onLeftDists
+        pm = fst $ maximumBy (compare `on` snd) onLeftDists
+        nextLines = [(p0, pm), (pm, p1)]
 
+      maxXPoint = maximumBy (compare `on` (^. _x)) points
+      minXPoint = minimumBy (compare `on` (^. _x)) points
+      maxYPoint = maximumBy (compare `on` (^. _y)) points
+      minYPoint = minimumBy (compare `on` (^. _y)) points
+      --
+      topLeft = (minXPoint, maxYPoint)
+      topRight = (maxYPoint, maxXPoint)
+      bottomRight = (maxXPoint, minYPoint)
+      bottomLeft = (minYPoint, minXPoint)
 
-
-
-quickHullPar_ :: [V2 Double] -> (V2 Double, V2 Double) -> Int -> [V2 Double]
-quickHullPar_ points (p0, p1) depth
-  | null rightOfLine = []
-  | length rightOfLine < 2 = [p0] ++ rightOfLine
-  | otherwise =
-      let maxPoint = fst $ maximumBy (\(_, x) (_, y) -> compare x y) rightOfLineDists
-          (leftResult, rightResult) =
-            if depth > 0
-              then
-                runEval $ do
-                  left <- rpar (force (quickHullPar_ rightOfLine (p0, maxPoint) (depth - 1)))
-                  right <- rpar (force (quickHullPar_ rightOfLine (maxPoint, p1) (depth - 1)))
-                  _ <- rseq left
-                  _ <- rseq right
-                  return (left, right)
-              else
-                ( quickHullPar_ rightOfLine (p0, maxPoint) (depth),
-                  quickHullPar_ rightOfLine (maxPoint, p1) (depth)
-                )
-      in leftResult ++ rightResult
-  where
-    pointsDists = [(p, crossZ (p1 - p0) (p - p0)) | p <- points]
-    rightOfLineDists = filter ((> 0) . snd) pointsDists
-    rightOfLine = map fst rightOfLineDists
-
-quickHullPar :: [V2 Double] -> [V2 Double]
-quickHullPar [] = []
-quickHullPar [p] = [p]
-quickHullPar points =
-  let cmpX (V2 ax _) (V2 bx _) = compare ax bx
-      maxXPoint = maximumBy cmpX points
-      minXPoint = minimumBy cmpX points
-
-      (leftHull, rightHull) =
-        runEval $ do
-          left <- rpar (force (quickHullPar_ points (minXPoint, maxXPoint) 2))
-          right <- rpar (force (quickHullPar_ points (maxXPoint, minXPoint) 2))
-          _ <- rseq left
-          _ <- rseq right
-          return (left, right)
-  in leftHull ++ rightHull
+   in concat (map (_quickHull2Par 1 points) [topLeft, topRight, bottomRight, bottomLeft] `using` parList rdeepseq)
+   -- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!
