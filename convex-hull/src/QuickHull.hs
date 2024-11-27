@@ -30,12 +30,7 @@ quickHull2 points =
 
       minPoint = minimum points
       maxPoint = maximum points
-      -- maxYPoint = maximumBy (compare `on` (^. _y)) points
-      -- minYPoint = minimumBy (compare `on` (^. _y)) points
-      -- topLeft = (maxPoint, maxYPoint)
-      -- topRight = (maxYPoint, minPoint)
-      -- bottomRight = (minPoint, minYPoint)
-      -- bottomLeft = (minYPoint, maxPoint)
+
    in _quickHull2 points minPoint maxPoint ++ _quickHull2 points maxPoint minPoint
 
 quickHull2Par :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
@@ -44,19 +39,19 @@ quickHull2Par p@[_] = p
 quickHull2Par p@[_, _] = p
 quickHull2Par p@[_, _, _] = p
 quickHull2Par points =
-  let maxDepth = 100 -- TODO: How do we determine maxDepth?
+  let maxDepth = 128 -- TODO: How do we determine maxDepth?
       _quickHull2Par :: (Num a, Ord a, NFData a) => Int -> [V2 a] -> V2 a -> V2 a -> [V2 a]
       _quickHull2Par d ps p0 p1
         | null onLeft = [p0]
-        | d > 0 = uncurry (++) ( (_quickHull2Par (d - 1) onLeft p0 pm, _quickHull2Par (d - 1) onLeft pm p1) `using` parTuple2 rdeepseq rdeepseq)
+        | d > 0 = uncurry (++) ( (_quickHull2Par (d-1) onLeft p0 pm, _quickHull2Par (d-1) onLeft pm p1) `using` parTuple2 rdeepseq rdeepseq)
         | otherwise = _quickHull2Par 0 onLeft p0 pm ++ _quickHull2Par 0 onLeft pm p1
        where
         onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
         onLeft = map fst onLeftDists
         pm = fst $ maximumBy (compare `on` snd) onLeftDists
-      
-      minPoint = minimum points
+
       maxPoint = maximum points
+      minPoint = minimum points
 
    in uncurry (++) ( (_quickHull2Par maxDepth points minPoint maxPoint, _quickHull2Par maxDepth points maxPoint minPoint) `using` parTuple2 rdeepseq rdeepseq)
 

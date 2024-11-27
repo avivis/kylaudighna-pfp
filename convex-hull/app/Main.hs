@@ -34,8 +34,8 @@ main = do
   -- assert (verifyConvexHull2Algorithm points quickHull2) return ()
   -- print points
   -- print $ grahamScan points
-  -- print $ quickHull2 points
-  print $ quickHull2Par points
+  print $ quickHull2 points
+  -- print $ quickHull2Par points
   -- print $ chans2 points
   --
   -- assert (verifyConvexHull2Algorithm points chans2) return ()
