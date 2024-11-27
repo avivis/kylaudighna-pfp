@@ -21,6 +21,11 @@ description: Please see the README on GitHub at <https://github.com/githubuser/c
 
 dependencies:
   - base >= 4.7 && < 5
+  - parallel
+  - deepseq
+  - lens
+  - linear
+  - split
 
 ghc-options:
   - -Wall
@@ -48,7 +53,6 @@ executables:
       - convex-hull
       - random
 
-
 tests:
   convex-hull-test:
     main: Spec.hs
@@ -60,3 +64,4 @@ tests:
     dependencies:
       - convex-hull
       - random
+      - Chart
