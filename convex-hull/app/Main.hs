@@ -3,6 +3,7 @@ module Main (main) where
 import GrahamScan (grahamScan)
 import Linear.V2
 import QuickHull (quickHull2, quickHull2Par)
+import System.Environment (getArgs)
 import System.Random
 
 randomV2s :: (RandomGen g, Random a) => g -> [V2 a]
@@ -14,11 +15,14 @@ randomV2s gen =
 
 main :: IO ()
 main = do
-  let vecs = take 1000000 $ randomV2s (mkStdGen 3) :: [V2 Double]
-      -- grahamScanResults = grahamScan vecs
-      -- quickHullResults = quickHull2 vecs
-      quickHullParResults = quickHull2Par vecs
---   print ""
-  -- print grahamScanResults
-  -- print quickHullResults
-  print quickHullParResults
+  args <- getArgs
+  case args of
+    [numPointsString, algorithm] -> do
+      let numPoints = read numPointsString :: Int
+          vecs = take numPoints $ randomV2s (mkStdGen 3) :: [V2 Double]
+      case algorithm of
+        "grahamScan" -> print $ grahamScan vecs
+        "quickHull" -> print $ quickHull2 vecs
+        "quickHullPar" -> print $ quickHull2Par vecs
+        _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull, or quickHullPar."
+    _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"
