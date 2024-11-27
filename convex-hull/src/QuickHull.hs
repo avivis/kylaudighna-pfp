@@ -1,8 +1,8 @@
-module QuickHull (quickHull2, quickHull2Par, quickHull2Par2way) where
+module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData, force)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (rdeepseq, parTuple2, using, parList)
+import Control.Parallel.Strategies (rdeepseq, using, parList)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy, partition)
 import Linear.Metric (dot)
@@ -88,27 +88,3 @@ quickHull2Par points =
 
    in concat (map (_quickHull2Par 1 points) [topLeft, topRight, bottomRight, bottomLeft] `using` parList rdeepseq)
    -- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!
-
-
-
-quickHull2Par2way :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
-quickHull2Par2way [] = []
-quickHull2Par2way p@[_] = p
-quickHull2Par2way p@[_, _] = p
-quickHull2Par2way p@[_, _, _] = p
-quickHull2Par2way points =
-  let maxDepth = 100 -- TODO: How do we determine maxDepth?
-      _quickHull2Par2way :: (Num a, Ord a, NFData a) => Int -> [V2 a] -> V2 a -> V2 a -> [V2 a]
-      _quickHull2Par2way d ps p0 p1
-        | null onLeft = [p0]
-        | d > 0 = uncurry (++) ( (_quickHull2Par2way (d-1) onLeft p0 pm, _quickHull2Par2way (d-1) onLeft pm p1) `using` parTuple2 rdeepseq rdeepseq)
-        | otherwise = _quickHull2Par2way 0 onLeft p0 pm ++ _quickHull2Par2way 0 onLeft pm p1
-       where
-        onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
-        onLeft = map fst onLeftDists
-        pm = fst $ maximumBy (compare `on` snd) onLeftDists
-
-      maxPoint = maximum points
-      minPoint = minimum points
-
-   in uncurry (++) ( (_quickHull2Par2way maxDepth points minPoint maxPoint, _quickHull2Par2way maxDepth points maxPoint minPoint) `using` parTuple2 rdeepseq rdeepseq)
