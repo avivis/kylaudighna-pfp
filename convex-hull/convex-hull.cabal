@@ -43,6 +43,7 @@ library
     , linear
     , parallel
     , split
+    , vector
   default-language: Haskell2010
 
 executable convex-hull-exe
@@ -63,6 +64,7 @@ executable convex-hull-exe
     , parallel
     , random
     , split
+    , vector
   default-language: Haskell2010
 
 test-suite convex-hull-test
@@ -85,4 +87,5 @@ test-suite convex-hull-test
     , parallel
     , random
     , split
+    , vector
   default-language: Haskell2010
