@@ -1,15 +1,13 @@
 module Chans (jarvisMarch, chans2, chans2Par) where
 
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (NFData, rdeepseq, parMap)
+import Control.Parallel.Strategies (NFData, parMap, rdeepseq)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Data.List.Split (divvy)
 import qualified Data.Vector as V
-import GHC.Float.RealFracMethods (floorFloatInt)
-import GrahamScan (grahamScan)
-import Lib (comparePointsPolar, sortPointsCW)
-import Linear.V2 (R1 (_x), V2 (V2))
+import Lib (orientation, sortPointsCCW)
+import Linear.V2 (R1 (_x), V2)
 import QuickHull (quickHull2)
 
 jarvisMarch :: (Ord a, Floating a) => [V2 a] -> [V2 a]
@@ -21,51 +19,31 @@ jarvisMarch points = _jarvisMarch start
  where
   start = minimum points
   _jarvisMarch p =
-    let next = (minimumBy (comparePointsPolar p) . filter (/= p)) points
+    let next = (minimumBy (orientation p) . filter (/= p)) points
      in if next == start then [p] else p : _jarvisMarch next
 
-rightmostInCCWHull :: (Ord a, Floating a) => V2 a -> V.Vector (V2 a) -> V2 a
-rightmostInCCWHull o h = h V.! binarySearch 0 (V.length h - 1)
+rightmostCCWPoint :: (Ord a, Floating a) => V2 a -> V.Vector (V2 a) -> V2 a
+rightmostCCWPoint o ps = ps V.! binarySearch 0 (V.length ps - 1)
  where
-  comparePrevNext i = (prevCompare, nextCompare)
+  compareAdjacent i = (prev, next)
    where
-    prevCompare = comparePointsPolar o (h V.! i) (h V.! ((i - 1) `mod` V.length h))
-    nextCompare = comparePointsPolar o (h V.! i) (h V.! ((i + 1) `mod` V.length h))
+    prev = orientation o (ps V.! i) (ps V.! ((i - 1) `mod` V.length ps))
+    next = orientation o (ps V.! i) (ps V.! ((i + 1) `mod` V.length ps))
 
   binarySearch l r
     -- If we can't reach anymore points, we'll do l
     | l >= r = l
     -- If neither o->m->m-1 nor o->m->m+1 are clockwise turns, we are at the rightmost point!
-    | mPrevCompare /= LT && mNextCompare /= LT = m
+    | mPrev /= LT && mNext /= LT = m
     -- If o->l->m is a clockwise turn and (o->l->l+1 is a clockwise turn or o->l->l-1 and o->l->l+1 turn the same way), or o->l->m is a counter-clockwise turn and o->m->m-1 is a clockwise turn, then search to the right of m (from l to m)
-    | mSide == GT && (lNextCompare == LT || lPrevCompare == lNextCompare) || mSide == LT && mPrevCompare == LT = binarySearch l m
+    | mSide == GT && (lNext == LT || lPrev == lNext) || mSide == LT && mPrev == LT = binarySearch l m
     -- Otherwise, search to the left of m
     | otherwise = binarySearch (m + 1) r
    where
     m = (l + r) `div` 2
-    mSide = comparePointsPolar o (h V.! l) (h V.! m) -- Which side is m on, relative to l?
-    (lPrevCompare, lNextCompare) = comparePrevNext l -- What are the orientations of o->l->l-1 and o->l->l+1?
-    (mPrevCompare, mNextCompare) = comparePrevNext m -- What are the orientations of o->m->m-1 and o->m->m+1?
-
-chansJarvisMarch :: (Ord a, Floating a) => [V.Vector (V2 a)] -> [V2 a]
-chansJarvisMarch subHulls = _chansJarvisMarch start []
- where
-  start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
-  _chansJarvisMarch p hull =
-    let nextHull = p : hull
-        rightmostHullPoints = [(rightmostInCCWHull p . V.filter (/= p)) subHull | subHull <- subHulls]
-        next = maximumBy (comparePointsPolar p) rightmostHullPoints
-     in if next == start then nextHull else _chansJarvisMarch next nextHull
-
-chansJarvisMarchPar :: (NFData a, Ord a, Floating a) => [V.Vector (V2 a)] -> [V2 a]
-chansJarvisMarchPar subHulls = _chansJarvisMarchPar start []
- where
-  start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
-  _chansJarvisMarchPar p hull =
-    let nextHull = p : hull
-        rightmostHullPoints = parMap rdeepseq (rightmostInCCWHull p . V.filter (/= p)) subHulls 
-        next = maximumBy (comparePointsPolar p) rightmostHullPoints
-     in if next == start then nextHull else _chansJarvisMarchPar next nextHull
+    mSide = orientation o (ps V.! l) (ps V.! m) -- Which side is m on, relative to l?
+    (lPrev, lNext) = compareAdjacent l -- What are the orientations of o->l->l-1 and o->l->l+1?
+    (mPrev, mNext) = compareAdjacent m -- What are the orientations of o->m->m-1 and o->m->m+1?
 
 -- in p : next : rightmostHullPoints
 
@@ -75,13 +53,15 @@ chansJarvisMarchPar subHulls = _chansJarvisMarchPar start []
 -- chans _ p@[_, _] = p
 -- chans _ p@[_, _, _] = p
 chans2 :: (Ord a, Floating a) => [V2 a] -> [V2 a]
-chans2 ps =
-  let
-    m = length ps `div` 64 -- TODO: Make finding m work
-    subPoints = divvy m m ps
-    subHulls = map (V.fromList . grahamScan) subPoints
-   in
-    chansJarvisMarch subHulls
+chans2 ps = _chans2 [] start
+ where
+  m = length ps `div` 128 -- TODO: Make finding m work; this is just a value I found empirically
+  subPoints = divvy m m ps
+  subHulls = map (V.fromList . sortPointsCCW . quickHull2) subPoints -- sortPointsCCW . quickHull2 is actually faster...
+  start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
+  _chans2 h p =
+    let next = maximumBy (orientation p) $ [(rightmostCCWPoint p . V.filter (/= p)) subHull | subHull <- subHulls]
+     in if next == start then h else _chans2 (p : h) next
 
 -- chans2 ps = _chans2 (1 :: Int)
 --  where
@@ -96,13 +76,16 @@ chans2 ps =
 --     expectedWrapTime = l * (floorFloatInt . logBase 2.0 . fromIntegral) l
 
 chans2Par :: (RealFloat a, NFData a) => [V2 a] -> [V2 a]
-chans2Par ps =
-  let
-    m = length ps `div` 16 -- TODO: Make finding m work
-    subPoints = divvy m m ps
-    subHulls = parMap rdeepseq (V.fromList . grahamScan) subPoints
-   in
-    chansJarvisMarchPar subHulls
+chans2Par ps = _chans2Par [] start
+ where
+  m = length ps `div` 128 -- TODO: Make finding m work
+  subPoints = divvy m m ps
+  subHulls = parMap rdeepseq (V.fromList . sortPointsCCW . quickHull2) subPoints -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
+  start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
+  _chans2Par h p =
+   let next = maximumBy (orientation p) $ parMap rdeepseq (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
+    in if next == start then h else _chans2Par (p : h) next
+
 -- chans2Par ps = _chans2 (1 :: Int)
 --  where
 --   _chans2 t

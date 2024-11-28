@@ -35,7 +35,7 @@ import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
 --
 --    in _quickHull2 points minPoint maxPoint ++ _quickHull2 points maxPoint minPoint
 
-quickHull2 :: (RealFloat a) => [V2 a] -> [V2 a]
+quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
 quickHull2 [] = []
 quickHull2 p@[_] = p
 quickHull2 p@[_, _] = p

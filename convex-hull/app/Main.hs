@@ -28,15 +28,15 @@ main = do
   -- let points = take 8 $ map (*100) $ randomV2s (mkStdGen 3) :: [V2 Double]
   -- let points = take 16 $ map (*100) $ randomV2s (mkStdGen 3) :: [V2 Double]
   -- let points = take 65536 $ randomV2s (mkStdGen 3) :: [V2 Double]
-  let points = take 1048576 $ randomV2s (mkStdGen 3) :: [V2 Double]
-  -- let points = take 2097152 $ randomV2s (mkStdGen 3) :: [V2 Double]
+  -- let points = take 1048576 $ randomV2s (mkStdGen 3) :: [V2 Double]
+  let points = take 2097152 $ randomV2s (mkStdGen 3) :: [V2 Double]
   -- assert (verifyConvexHull2Algorithm points grahamScan) return ()
   --
   -- assert (verifyConvexHull2Algorithm points quickHull2) return ()
   -- print $ sortPointsCCW points
   -- print $ grahamScan points
   -- print $ quickHull2 points
-  print $ quickHull2Par points
+  -- print $ quickHull2Par points
   -- print $ chans2 points
   print $ chans2Par points
   --
