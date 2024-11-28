@@ -2,14 +2,17 @@ module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (parMap, rdeepseq)
+import Control.Parallel.Strategies (Strategy, parMap, rdeepseq)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
 
+-- TODO: I think this type signature should be more clear
+parConcatMap :: Strategy [b] -> (a -> [b]) -> [a] -> [b]
+parConcatMap strat f l = concat (parMap strat f l)
+
 -- import Linear.V3 (R3 (_z), V3 (..), cross)
 
--- TODO: Create partition before calling quickHull_
 -- TODO: Handle collinear points (>=0, filter out p0)
 
 -- -- Any shape with < 4 points is automatically its own convex hull, as it takes 3 points to make a 2D simplex
@@ -40,25 +43,25 @@ quickHull2 [] = []
 quickHull2 p@[_] = p
 quickHull2 p@[_, _] = p
 quickHull2 p@[_, _, _] = p
-quickHull2 points =
-  let _quickHull2 ps (p0, p1)
-        | null onLeft = [p0]
-        | otherwise = _quickHull2 onLeft (p0, pm) ++ _quickHull2 onLeft (pm, p1)
-       where
-        onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
-        onLeft = map fst onLeftDists
-        pm = fst $ maximumBy (compare `on` snd) onLeftDists
+quickHull2 points = concatMap (_quickHull2 points) [topLeft, topRight, bottomLeft, bottomRight]
+ where
+  _quickHull2 ps (p0, p1)
+    | null onLeft = [p0]
+    | otherwise = _quickHull2 onLeft (p0, pm) ++ _quickHull2 onLeft (pm, p1)
+   where
+    onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
+    onLeft = map fst onLeftDists
+    pm = fst $ maximumBy (compare `on` snd) onLeftDists
 
-      maxXPoint = maximumBy (compare `on` (^. _x)) points
-      minXPoint = minimumBy (compare `on` (^. _x)) points
-      maxYPoint = maximumBy (compare `on` (^. _y)) points
-      minYPoint = minimumBy (compare `on` (^. _y)) points
-      --
-      topLeft = (minXPoint, maxYPoint)
-      topRight = (maxYPoint, maxXPoint)
-      bottomRight = (maxXPoint, minYPoint)
-      bottomLeft = (minYPoint, minXPoint)
-   in concatMap (_quickHull2 points) [topLeft, topRight, bottomLeft, bottomRight]
+  maxXPoint = maximumBy (compare `on` (^. _x)) points
+  minXPoint = minimumBy (compare `on` (^. _x)) points
+  maxYPoint = maximumBy (compare `on` (^. _y)) points
+  minYPoint = minimumBy (compare `on` (^. _y)) points
+  --
+  topLeft = (minXPoint, maxYPoint)
+  topRight = (maxYPoint, maxXPoint)
+  bottomRight = (maxXPoint, minYPoint)
+  bottomLeft = (minYPoint, minXPoint)
 
 -- quickHull2Par :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
 -- quickHull2Par [] = []
@@ -89,30 +92,30 @@ quickHull2Par [] = []
 quickHull2Par p@[_] = p
 quickHull2Par p@[_, _] = p
 quickHull2Par p@[_, _, _] = p
-quickHull2Par points =
-  let maxDepth = 100 -- TODO: How do we determine maxDepth?
-      _quickHull2Par :: (Num a, Ord a, NFData a) => Int -> [V2 a] -> (V2 a, V2 a) -> [V2 a]
-      _quickHull2Par d ps (p0, p1)
-        | null onLeft = [p0]
-        | d > 0 = concat (parMap rdeepseq (_quickHull2Par (d - 1) onLeft) nextLines)
-        | otherwise = concatMap (_quickHull2Par 0 onLeft) nextLines
-       where
-        onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
-        onLeft = map fst onLeftDists
-        pm = fst $ maximumBy (compare `on` snd) onLeftDists
-        nextLines = [(p0, pm), (pm, p1)]
+quickHull2Par points = parConcatMap rdeepseq (_quickHull2Par maxDepth points) [topLeft, topRight, bottomRight, bottomLeft]
+ where
+  _quickHull2Par :: (Num a, Ord a, NFData a) => Int -> [V2 a] -> (V2 a, V2 a) -> [V2 a]
+  _quickHull2Par d ps (p0, p1)
+    | null onLeft = [p0]
+    | d > 0 = parConcatMap rdeepseq (_quickHull2Par (d - 1) onLeft) nextLines
+    | otherwise = concatMap (_quickHull2Par 0 onLeft) nextLines
+   where
+    onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
+    onLeft = map fst onLeftDists
+    pm = fst $ maximumBy (compare `on` snd) onLeftDists
+    nextLines = [(p0, pm), (pm, p1)]
 
-      maxXPoint = maximumBy (compare `on` (^. _x)) points
-      minXPoint = minimumBy (compare `on` (^. _x)) points
-      maxYPoint = maximumBy (compare `on` (^. _y)) points
-      minYPoint = minimumBy (compare `on` (^. _y)) points
-      --
-      topLeft = (minXPoint, maxYPoint)
-      topRight = (maxYPoint, maxXPoint)
-      bottomRight = (maxXPoint, minYPoint)
-      bottomLeft = (minYPoint, minXPoint)
+  maxXPoint = maximumBy (compare `on` (^. _x)) points
+  minXPoint = minimumBy (compare `on` (^. _x)) points
+  maxYPoint = maximumBy (compare `on` (^. _y)) points
+  minYPoint = minimumBy (compare `on` (^. _y)) points
+  --
+  topLeft = (minXPoint, maxYPoint)
+  topRight = (maxYPoint, maxXPoint)
+  bottomRight = (maxXPoint, minYPoint)
+  bottomLeft = (minYPoint, minXPoint)
 
-   in concat (parMap rdeepseq (_quickHull2Par maxDepth points) [topLeft, topRight, bottomRight, bottomLeft])
+  maxDepth = 100 -- TODO: How do we determine maxDepth?
 
 -- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!
 -- quickHull3_ :: (Num a, Ord a) => [V3 a] -> V3 a -> V3 a -> V3 a -> [V3 a]
