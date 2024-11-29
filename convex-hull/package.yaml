@@ -50,6 +50,7 @@ executables:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
+      - -O2
     dependencies:
       - convex-hull
       - random
@@ -62,6 +63,7 @@ tests:
       - -threaded
       - -rtsopts
       - -with-rtsopts=-N
+      - -O2
     dependencies:
       - convex-hull
       - random

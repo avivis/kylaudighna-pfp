@@ -13,6 +13,12 @@ randomV2s gen =
       (y, gen'') = random gen'
    in V2 x y : randomV2s gen''
 
+-- randomV3s :: (RandomGen g, Random a) => g -> [V3 a]
+-- randomV3s gen =
+--   let (x, gen') = random gen
+--       (y, gen'') = random gen'
+--       (z, gen''') = random gen''
+--    in V3 x y z : randomV3s gen'''
 
 main :: IO ()
 main = do
