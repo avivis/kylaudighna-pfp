@@ -9,6 +9,7 @@ import qualified Data.Vector as V
 import Lib (orientation, sortPointsCCW)
 import Linear.V2 (R1 (_x), V2)
 import QuickHull (quickHull2)
+import GHC.Float (sqrtDouble)
 
 jarvisMarch :: (Ord a, Num a) => [V2 a] -> [V2 a]
 jarvisMarch [] = []
@@ -45,31 +46,10 @@ rightmostCCWPoint o ps = ps V.! binarySearch 0 (V.length ps - 1)
     (lPrev, lNext) = compareAdjacent l -- What are the orientations of o->l->l-1 and o->l->l+1?
     (mPrev, mNext) = compareAdjacent m -- What are the orientations of o->m->m-1 and o->m->m+1?
 
--- chans :: ([Point2D] -> [Point2D]) -> [Point2D] -> [Point2D]
--- chans _ [] = []
--- chans _ p@[_] = p
--- chans _ p@[_, _] = p
--- chans _ p@[_, _, _] = p
--- chans2 :: (Ord a, Floating a) => [V2 a] -> [V2 a]
--- chans2 ps = _chans2 (100 :: Int)
---  where
---   start = minimumBy (compare `on` (^. _x)) ps -- Point across all hulls with lowest X
---   _chans2 t = chansJarvisMarch [] start 0
---    where
---     m = min (length ps) ((2 :: Int) ^ ((2 :: Int) ^ t))
---     subPoints = divvy m m ps
---     subHulls = map (V.fromList . sortPointsCCW . quickHull2) subPoints
---     chansJarvisMarch hull p h
---       -- | h > m = _chans2 (t + 1)
---       | next == start = hull
---       | otherwise = chansJarvisMarch (p : hull) next (h + 1)
---      where
---       next = maximumBy (orientation p) $ [(rightmostCCWPoint p . V.filter (/= p)) subHull | subHull <- subHulls]
-
 chans2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
 chans2 ps = _chans2 start
  where
-  m = length ps `div` 128 -- TODO: Make finding m better; this is just a value I found empirically
+  m = (floor . sqrtDouble . fromIntegral) (length ps) -- TODO: I think this is a good approximation, does anyone have a better one?
   subPoints = divvy m m ps
   subHulls = map (V.fromList . sortPointsCCW . quickHull2) subPoints
   start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
@@ -80,10 +60,10 @@ chans2 ps = _chans2 start
 chans2Par :: (Ord a, Num a, NFData a) => [V2 a] -> [V2 a]
 chans2Par ps = _chans2Par start
  where
-  m = length ps `div` 128 -- TODO: Make finding m work; this is just a value I found empirically
+  m = (floor . sqrtDouble . fromIntegral) (length ps)
   subPoints = divvy m m ps
   subHulls = parMap rdeepseq (V.fromList . sortPointsCCW . quickHull2) subPoints -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
   start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
   _chans2Par p =
-   let next = maximumBy (orientation p) $ parMap rdeepseq (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
+   let next = maximumBy (orientation p) $ map (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
     in if next == start then [] else p : _chans2Par next

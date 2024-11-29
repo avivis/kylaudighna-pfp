@@ -1,13 +1,12 @@
 module QuickHull (quickHull2, quickHull2Par) where
 
-import Control.DeepSeq (NFData, force)
+import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
 import Control.Parallel.Strategies (rdeepseq, using, parList)
 import Data.Function (on)
-import Data.List (maximumBy, minimumBy, partition)
-import Linear.Metric (dot)
-import Linear.V2 (R1 (_x), R2 (_y), V2 (V2), crossZ)
-import Linear.V3 (V3 (..), cross)
+import Data.List (maximumBy, minimumBy)
+import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
+-- import Linear.V3 (V3 (..), cross)
 
 -- TODO: Create partition before calling quickHull_
 -- TODO: Handle collinear points (>=0, filter out p0)
