@@ -1,7 +1,7 @@
 module Chans (jarvisMarch, chans2, chans2Par) where
 
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (NFData, parMap, rdeepseq)
+import Control.Parallel.Strategies (NFData, parMap, rdeepseq, parBuffer, withStrategy)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Data.List.Split (chunksOf)
@@ -62,9 +62,9 @@ chans2 ps = _chans2 start
 chans2Par :: (Ord a, Num a, NFData a) => [V2 a] -> [V2 a]
 chans2Par ps = _chans2Par start
  where
-  m = (floor . sqrtDouble . fromIntegral) (length ps)
+  m = (floor . sqrtDouble . fromIntegral) (length ps) -- TODO: Remove length, I just realized that it adds a ton of time
   subPoints = chunksOf m ps
-  subHulls = parMap rdeepseq (V.fromList . sortPointsCCW . quickHull2) subPoints -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
+  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (V.fromList . sortPointsCCW . quickHull2) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
   start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
   _chans2Par p =
     let next = maximumBy (orientation p) $ map (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
