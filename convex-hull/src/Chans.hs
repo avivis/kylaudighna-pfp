@@ -68,10 +68,10 @@ leftmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
     (mPrev, mNext) = compareAdjacent m -- What are the orientations of o->m->m-1 and o->m->m+1?
 
 chans2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
-chans2 ps = _chans2 start
+chans2 l = _chans2 start
  where
-  m = (floor . sqrtDouble . fromIntegral) (length ps) -- TODO: I think this is a good approximation, does anyone have a better one?
-  subPoints = chunksOf m ps
+  m = (floor . sqrtDouble . fromIntegral) (length l) -- TODO: I think this is a good approximation, does anyone have a better one?
+  subPoints = chunksOf m l
   subHulls = map (quickHull2 . V.fromList) subPoints
   start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
   _chans2 p =

@@ -4,56 +4,32 @@ import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
 import Control.Parallel.Strategies (parList, rdeepseq, using)
 import Data.Function (on)
-import Data.List (maximumBy, minimumBy, partition)
+import Data.List (maximumBy, minimumBy)
 import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
-import Lib (distFromLine2)
 
 -- TODO: Handle collinear points (>=0, filter out p0)
 
+quickHull2_ :: (Ord a, Num a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
+quickHull2_ points p0 p1 =
+  let pointsDists = [(p, crossZ (p1 - p0) (p - p0)) | p <- points]
+      onLeftDists = filter ((> 0) . snd) pointsDists
+      onLeft = map fst onLeftDists
+   in if length onLeft < 2
+        then p0 : onLeft
+        else
+          let pm = fst $ maximumBy (compare `on` snd) onLeftDists
+           in quickHull2_ onLeft p0 pm ++ quickHull2_ onLeft pm p1
+
+-- Any shape with < 4 points is automatically its own convex hull, as it takes 3 points to make a 2D simplex
 quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
 quickHull2 [] = []
 quickHull2 p@[_] = p
 quickHull2 p@[_, _] = p
 quickHull2 p@[_, _, _] = p
 quickHull2 points =
-  let
-    _quickHull2 :: (Num a, Ord a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
-    _quickHull2 ps p0 p1
-      | null ps = [p1]
-      | otherwise = _quickHull2 onRight pm p1 ++ _quickHull2 onLeft p0 pm
-     where
-      pm = maximumBy (compare `on` distFromLine2 p0 p1) ps
-      (onLeft, onRightOrCenter) = partition ((> 0) . distFromLine2 p0 pm) ps
-      onRight = filter ((> 0) . distFromLine2 pm p1) onRightOrCenter
-
-    pXMax = maximum points
-    pXMin = minimum points
-
-    (topPoints, bottomPoints) = partition ((> 0) . distFromLine2 pXMin pXMax) points
-   in
-    _quickHull2 bottomPoints pXMax pXMin ++ _quickHull2 topPoints pXMin pXMax
-
--- quickHull2_ :: (Ord a, Num a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
--- quickHull2_ points p0 p1 =
---   let pointsDists = [(p, crossZ (p1 - p0) (p - p0)) | p <- points]
---       onLeftDists = filter ((> 0) . snd) pointsDists
---       onLeft = map fst onLeftDists
---    in if length onLeft < 2
---         then p0 : onLeft
---         else
---           let pm = fst $ maximumBy (compare `on` snd) onLeftDists
---            in quickHull2_ onLeft p0 pm ++ quickHull2_ onLeft pm p1
---
--- -- Any shape with < 4 points is automatically its own convex hull, as it takes 3 points to make a 2D simplex
--- quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
--- quickHull2 [] = []
--- quickHull2 p@[_] = p
--- quickHull2 p@[_, _] = p
--- quickHull2 p@[_, _, _] = p
--- quickHull2 points =
---   let maxXPoint = maximumBy (compare `on` (^. _x)) points
---       minXPoint = minimumBy (compare `on` (^. _x)) points
---    in quickHull2_ points minXPoint maxXPoint ++ quickHull2_ points maxXPoint minXPoint
+  let maxXPoint = maximumBy (compare `on` (^. _x)) points
+      minXPoint = minimumBy (compare `on` (^. _x)) points
+   in quickHull2_ points minXPoint maxXPoint ++ quickHull2_ points maxXPoint minXPoint
 
 -- Min X, min y, max X and max Y points all have to be part of the convex hull, so I do a 4-way
 -- parallel approach here
