@@ -3,6 +3,7 @@ module Lib (
   sortPointsCW,
   sortPointsCCW,
   isCCWTurn,
+  distFromLine2,
 ) where
 
 import Data.List (sortBy)
@@ -16,6 +17,10 @@ squareDistance2 (V2 x0 y0) (V2 x1 y1) = dx * dx + dy * dy
  where
   dx = x1 - x0
   dy = y1 - y0
+
+-- Calculate distance from line
+distFromLine2 :: (Num a) => V2 a -> V2 a -> V2 a -> a
+distFromLine2 p0 p1 = crossZ (p1 - p0) . subtract p0
 
 -- GT = o -> p1 -> p2 is a counter-clockwise turn
 -- LT = o -> p1 -> p2 is a clockwise turn

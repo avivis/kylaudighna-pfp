@@ -1,15 +1,14 @@
 module Chans (jarvisMarch, chans2, chans2Par) where
 
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (NFData, parMap, rdeepseq, parBuffer, withStrategy)
+import Control.Parallel.Strategies (NFData, parBuffer, rdeepseq, withStrategy)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Vector as V
 import GHC.Float (sqrtDouble)
-import Lib (orientation, sortPointsCCW)
+import Lib (distFromLine2, orientation)
 import Linear.V2 (R1 (_x), V2)
-import QuickHull (quickHull2)
 
 jarvisMarch :: (Ord a, Num a) => [V2 a] -> [V2 a]
 jarvisMarch [] = []
@@ -23,8 +22,28 @@ jarvisMarch points = _jarvisMarch start
     let next = (minimumBy (orientation p) . filter (/= p)) points
      in if next == start then [p] else p : _jarvisMarch next
 
-rightmostCCWPoint :: (Ord a, Num a) => V2 a -> V.Vector (V2 a) -> V2 a
-rightmostCCWPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
+-- Special vectorized version of quickHull, since with sub-chunks it's fairly cheap to create the smaller sub-point vectors
+quickHull2 :: (Ord a, Num a) => V.Vector (V2 a) -> V.Vector (V2 a)
+quickHull2 points =
+  let
+    _quickHull2 :: (Num a, Ord a) => V.Vector (V2 a) -> V2 a -> V2 a -> V.Vector (V2 a)
+    _quickHull2 v p0 p1
+      | null v = V.singleton p1
+      | otherwise = _quickHull2 onRight pm p1 V.++ _quickHull2 onLeft p0 pm
+     where
+      pm = maximumBy (compare `on` distFromLine2 p0 p1) v
+      (onLeft, onRightOrCenter) = V.partition ((> 0) . distFromLine2 p0 pm) v
+      onRight = V.filter ((> 0) . distFromLine2 pm p1) onRightOrCenter
+
+    pXMax = maximum points
+    pXMin = minimum points
+
+    (topPoints, bottomPoints) = V.partition ((> 0) . distFromLine2 pXMin pXMax) points
+   in
+    if length points < 4 then points else _quickHull2 bottomPoints pXMax pXMin V.++ _quickHull2 topPoints pXMin pXMax
+
+leftmostPoint :: (Ord a, Num a) => V2 a -> V.Vector (V2 a) -> V2 a
+leftmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
  where
   compareAdjacent i = (prev, next)
    where
@@ -53,10 +72,10 @@ chans2 ps = _chans2 start
  where
   m = (floor . sqrtDouble . fromIntegral) (length ps) -- TODO: I think this is a good approximation, does anyone have a better one?
   subPoints = chunksOf m ps
-  subHulls = map (V.fromList . sortPointsCCW . quickHull2) subPoints
-  start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
+  subHulls = map (quickHull2 . V.fromList) subPoints
+  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
   _chans2 p =
-    let next = maximumBy (orientation p) $ map (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
+    let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
      in if next == start then [p] else p : _chans2 next
 
 chans2Par :: (Ord a, Num a, NFData a) => [V2 a] -> [V2 a]
@@ -64,8 +83,8 @@ chans2Par ps = _chans2Par start
  where
   m = (floor . sqrtDouble . fromIntegral) (length ps) -- TODO: Remove length, I just realized that it adds a ton of time
   subPoints = chunksOf m ps
-  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (V.fromList . sortPointsCCW . quickHull2) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
-  start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
+  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (quickHull2 . V.fromList) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
+  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
   _chans2Par p =
-    let next = maximumBy (orientation p) $ map (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
+    let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
      in if next == start then [p] else p : _chans2Par next

@@ -2,15 +2,13 @@ module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (rdeepseq, using, parList)
+import Control.Parallel.Strategies (parList, rdeepseq, using)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy, partition)
 import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
+import Lib (distFromLine2)
 
 -- TODO: Handle collinear points (>=0, filter out p0)
-
-distFromLine :: (Num a) => V2 a -> V2 a -> V2 a -> a
-distFromLine p0 p1 = crossZ (p1 - p0) . subtract p0
 
 quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
 quickHull2 [] = []
@@ -21,19 +19,19 @@ quickHull2 points =
   let
     _quickHull2 :: (Num a, Ord a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
     _quickHull2 ps p0 p1
-      | (null . drop 1) ps = p0 : ps
-      | otherwise = _quickHull2 onLeft p0 pm ++ _quickHull2 onRight pm p1
+      | null ps = [p1]
+      | otherwise = _quickHull2 onRight pm p1 ++ _quickHull2 onLeft p0 pm
      where
-      pm = maximumBy (compare `on` distFromLine p0 p1) ps
-      (onLeft, onRightOrCenter) = partition ((> 0) . distFromLine p0 pm) ps
-      onRight = filter ((> 0) . distFromLine pm p1) onRightOrCenter
+      pm = maximumBy (compare `on` distFromLine2 p0 p1) ps
+      (onLeft, onRightOrCenter) = partition ((> 0) . distFromLine2 p0 pm) ps
+      onRight = filter ((> 0) . distFromLine2 pm p1) onRightOrCenter
 
     pXMax = maximum points
     pXMin = minimum points
 
-    (topPoints, bottomPoints) = partition ((>0) . distFromLine pXMin pXMax) points
+    (topPoints, bottomPoints) = partition ((> 0) . distFromLine2 pXMin pXMax) points
    in
-    _quickHull2 topPoints pXMin pXMax ++ _quickHull2 bottomPoints pXMax pXMin
+    _quickHull2 bottomPoints pXMax pXMin ++ _quickHull2 topPoints pXMin pXMax
 
 -- quickHull2_ :: (Ord a, Num a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
 -- quickHull2_ points p0 p1 =
@@ -70,7 +68,7 @@ quickHull2Par points =
       _quickHull2Par d ps (p0, p1)
         | null onLeft = [p0]
         | d < maxDepth = concat (map (_quickHull2Par (d + 1) onLeft) nextLines `using` parList rdeepseq)
-        | otherwise = concatMap(_quickHull2Par (d + 1) onLeft) nextLines
+        | otherwise = concatMap (_quickHull2Par (d + 1) onLeft) nextLines
        where
         onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
         onLeft = map fst onLeftDists
@@ -86,6 +84,6 @@ quickHull2Par points =
       topRight = (maxYPoint, maxXPoint)
       bottomRight = (maxXPoint, minYPoint)
       bottomLeft = (minYPoint, minXPoint)
-
    in concat (map (_quickHull2Par 1 points) [topLeft, topRight, bottomRight, bottomLeft] `using` parList rdeepseq)
-   -- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!
+
+-- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!
