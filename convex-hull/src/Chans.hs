@@ -75,7 +75,7 @@ chans2 ps = _chans2 start
   start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
   _chans2 p =
    let next = maximumBy (orientation p) $ map (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
-    in if next == start then [] else p : _chans2 next
+    in if next == start then [p] else p : _chans2 next
 
 chans2Par :: (Ord a, Num a, NFData a) => [V2 a] -> [V2 a]
 chans2Par ps = _chans2Par start
@@ -86,4 +86,4 @@ chans2Par ps = _chans2Par start
   start = minimumBy (compare `on` (^. _x)) [V.minimumOn (^. _x) subHull | subHull <- subHulls] -- Point across all hulls with lowest X
   _chans2Par p =
    let next = maximumBy (orientation p) $ parMap rdeepseq (rightmostCCWPoint p . V.filter (/= p)) subHulls -- Eval all rightmost points in parallel
-    in if next == start then [] else p : _chans2Par next
+    in if next == start then [p] else p : _chans2Par next

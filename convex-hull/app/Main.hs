@@ -20,12 +20,12 @@ main = do
   case args of
     [numPointsString, algorithm] -> do
       let numPoints = read numPointsString :: Int
-          vecs = take numPoints $ randomV2s (mkStdGen 3) :: [V2 Double]
+          points = take numPoints $ randomV2s (mkStdGen 3) :: [V2 Double]
       case algorithm of
-        "grahamScan" -> print $ grahamScan vecs
-        "quickHull" -> print $ quickHull2 vecs
-        "quickHullPar" -> print $ quickHull2Par vecs
-        "chans" -> print $ chans2 vecs
-        "chansPar" ->  print $ chans2Par vecs
+        "grahamScan" -> print $ grahamScan points
+        "quickHull" -> print $ quickHull2 points
+        "quickHullPar" -> print $ quickHull2Par points
+        "chans" -> print $ chans2 points
+        "chansPar" ->  print $ chans2Par points
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull, quickHullPar, chans, or chansPar."
     _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"
