@@ -2,16 +2,12 @@ module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (rdeepseq, using, parList)
+import Control.Parallel.Strategies (parList, rdeepseq, using)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
--- import Linear.Metric (dot)
 import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
--- import Linear.V3 (V3 (..), cross)
 
-
--- TODO: Handle collinear points (>=0, filter out p0
-
+-- TODO: Handle collinear points (>=0, filter out p0)
 
 quickHull2_ :: (Ord a, Num a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
 quickHull2_ points p0 p1 =
@@ -35,7 +31,6 @@ quickHull2 points =
       minXPoint = minimumBy (compare `on` (^. _x)) points
    in quickHull2_ points minXPoint maxXPoint ++ quickHull2_ points maxXPoint minXPoint
 
-
 -- Min X, min y, max X and max Y points all have to be part of the convex hull, so I do a 4-way
 -- parallel approach here
 quickHull2Par :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
@@ -49,7 +44,7 @@ quickHull2Par points =
       _quickHull2Par d ps (p0, p1)
         | null onLeft = [p0]
         | d < maxDepth = concat (map (_quickHull2Par (d + 1) onLeft) nextLines `using` parList rdeepseq)
-        | otherwise = concatMap(_quickHull2Par (d + 1) onLeft) nextLines
+        | otherwise = concatMap (_quickHull2Par (d + 1) onLeft) nextLines
        where
         onLeftDists = filter ((> 0) . snd) [(p, crossZ (p1 - p0) (p - p0)) | p <- ps]
         onLeft = map fst onLeftDists
@@ -65,6 +60,6 @@ quickHull2Par points =
       topRight = (maxYPoint, maxXPoint)
       bottomRight = (maxXPoint, minYPoint)
       bottomLeft = (minYPoint, minXPoint)
-
    in concat (map (_quickHull2Par 1 points) [topLeft, topRight, bottomRight, bottomLeft] `using` parList rdeepseq)
-   -- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!
+
+-- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!

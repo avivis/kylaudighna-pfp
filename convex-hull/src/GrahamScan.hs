@@ -4,7 +4,6 @@ import Data.List (minimumBy, sortOn)
 import Lib (isCCWTurn)
 import Linear.V2
 
-
 angleToXAxis :: (RealFloat a) => V2 a -> V2 a -> a
 angleToXAxis (V2 x0 y0) (V2 x y) = atan2 (y - y0) (x - x0)
 
