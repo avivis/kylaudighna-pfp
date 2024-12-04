@@ -26,6 +26,6 @@ main = do
         "quickHull" -> print $ quickHull2 points
         "quickHullPar" -> print $ quickHull2Par points
         "chans" -> print $ chans2 points
-        "chansPar" ->  print $ chans2Par points
+        "chansPar" ->  print $ chans2Par numPoints points
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull, quickHullPar, chans, or chansPar."
     _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"

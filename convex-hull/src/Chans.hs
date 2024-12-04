@@ -78,10 +78,10 @@ chans2 l = _chans2 start
     let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
      in if next == start then [p] else p : _chans2 next
 
-chans2Par :: (Ord a, Num a, NFData a) => [V2 a] -> [V2 a]
-chans2Par ps = _chans2Par start
+chans2Par :: (Ord a, Num a, NFData a) => Int -> [V2 a] -> [V2 a]
+chans2Par n ps = _chans2Par start
  where
-  m = (floor . sqrtDouble . fromIntegral) (length ps) -- TODO: Remove length, I just realized that it adds a ton of time
+  m = floor . sqrtDouble . fromIntegral $ n
   subPoints = chunksOf m ps
   subHulls = withStrategy (parBuffer 32 rdeepseq) (map (quickHull2 . V.fromList) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
   start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
