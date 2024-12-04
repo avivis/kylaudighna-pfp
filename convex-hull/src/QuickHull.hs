@@ -1,19 +1,18 @@
 module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData)
-import Control.Lens ((^.))
-import Control.Parallel.Strategies (Strategy, parMap, parTuple2, rdeepseq, using)
+import Control.Parallel.Strategies (parTuple2, rdeepseq, using)
 import Data.Function (on)
 import Data.List (maximumBy, partition)
-import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
+import Linear.V2 (V2, crossZ)
 
 -- import Linear.V3 (V3 (..), cross)
 
 -- TODO: Create partition before calling quickHull_
 -- TODO: Handle collinear points (>=0, filter out p0)
 
-parConcatMap :: Strategy [b] -> (a -> [b]) -> [a] -> [b]
-parConcatMap strat f l = concat (parMap strat f l)
+-- parConcatMap :: Strategy [b] -> (a -> [b]) -> [a] -> [b]
+-- parConcatMap strat f l = concat (parMap strat f l)
 
 distFromLine :: (Num a) => V2 a -> V2 a -> V2 a -> a
 distFromLine p0 p1 = crossZ (p1 - p0) . subtract p0
@@ -58,7 +57,6 @@ quickHull2Par points =
         pm = maximumBy (compare `on` distFromLine p0 p1) ps
         (onLeft, onRight) = (filter ((> 0) . distFromLine p0 pm) ps, filter ((> 0) . distFromLine pm p1) ps) `using` parTuple2 rdeepseq rdeepseq
         (l, r) = (_quickHull2Par onLeft p0 pm, _quickHull2Par onRight pm p1) `using` parTuple2 rdeepseq rdeepseq
-
 
       (pXMax, pXMin) = (maximum points, minimum points) `using` parTuple2 rdeepseq rdeepseq
       (topPoints, bottomPoints) = partition ((> 0) . distFromLine pXMin pXMax) points
