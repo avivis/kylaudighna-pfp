@@ -1,6 +1,7 @@
 module Main (main) where
 
 import Linear.V2
+import qualified Data.Vector as V
 import GrahamScan (grahamScan)
 import QuickHull (quickHull2, quickHull2Par)
 import Chans (chans2, chans2Par)
@@ -26,6 +27,6 @@ main = do
         "quickHull" -> print $ quickHull2 points
         "quickHullPar" -> print $ quickHull2Par points
         "chans" -> print $ chans2 points
-        "chansPar" ->  print $ chans2Par points
+        "chansPar" ->  print $ chans2Par (V.fromList points)
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull, quickHullPar, chans, or chansPar."
     _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"
