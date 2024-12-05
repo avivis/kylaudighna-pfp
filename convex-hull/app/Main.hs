@@ -19,13 +19,13 @@ main = do
   args <- getArgs
   case args of
     [numPointsString, algorithm] -> do
-      let numPoints = read numPointsString :: Int
-          points = take numPoints $ randomV2s (mkStdGen 3) :: [V2 Double]
+      let n = read numPointsString :: Int
+          points = take n $ randomV2s (mkStdGen 3) :: [V2 Double]
       case algorithm of
         "grahamScan" -> print $ grahamScan points
         "quickHull" -> print $ quickHull2 points
         "quickHullPar" -> print $ quickHull2Par points
-        "chans" -> print $ chans2 points
-        "chansPar" ->  print $ chans2Par points
+        "chans" -> print $ chans2 n points
+        "chansPar" ->  print $ chans2Par n points
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull, quickHullPar, chans, or chansPar."
     _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"
