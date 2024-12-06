@@ -40,7 +40,7 @@ quickHull2 points =
 
     (topPoints, bottomPoints) = V.partition ((> 0) . distFromLine2 pXMin pXMax) points
    in
-    if length points < 4 then points else _quickHull2 bottomPoints pXMax pXMin V.++ _quickHull2 topPoints pXMin pXMax
+    if V.length points < 4 then points else _quickHull2 bottomPoints pXMax pXMin V.++ _quickHull2 topPoints pXMin pXMax
 
 leftmostPoint :: (Ord a, Num a) => V2 a -> V.Vector (V2 a) -> V2 a
 leftmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
@@ -83,7 +83,7 @@ chans2Par n ps = _chans2Par start
  where
   m = 3 * (floor . sqrtDouble . fromIntegral) n
   subPoints = chunksOf m ps
-  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (quickHull2 . V.fromList) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
+  subHulls = withStrategy (parBuffer 64 rdeepseq) (map (quickHull2 . V.fromList) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
   start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
   _chans2Par p =
     let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
