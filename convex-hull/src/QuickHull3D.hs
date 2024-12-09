@@ -8,14 +8,18 @@ import Linear.V3 (V3(..), cross)
 import Linear.Metric (dot, norm, distance)
 import Linear.V3 (R1(_x))
 
+-- Face representation as described in Section 1: "We represent a convex hull with a set of facets and a set of adjacency lists"
 data Face a = Face {vertices :: (V3 a, V3 a, V3 a), outsideSet :: [(V3 a, a)], furthestPoint :: Maybe (V3 a, a)}
 
+-- Based on geometric orientation test described in Section 2: Signed volume calculation for determining if point is above face
 signedVolume :: Floating a => V3 a -> V3 a -> V3 a -> V3 a -> a
 signedVolume a b c d = dot (cross (b - a) (c - a)) (d - a) / 6.0
 
+-- find points above a plane with distance, implementing the "outside set" concept from Section 2: "A point is in a facet's outside set only if it is above the facet"
 findPointsAbove :: (Ord a, Floating a) => a -> V3 a -> V3 a -> V3 a -> [V3 a] -> [(V3 a, a)]
 findPointsAbove epsilon p0 p1 p2 points = let volumes = [(p, vol) | p <- points, p /= p0 && p /= p1 && p /= p2, let vol = signedVolume p0 p1 p2 p, vol > epsilon] in volumes
 
+-- Create initial faces of tetrahedron with their outside sets from Section 2: "Quickhull starts with the convex hull of d + 1 points"
 createInitialFaces :: (Ord a, Floating a) => a -> [V3 a] -> V3 a -> V3 a -> V3 a -> V3 a -> [Face a]
 createInitialFaces epsilon points p0 p1 p2 p3 = 
     let faces = [(p0, p1, p2), (p0, p2, p3), (p0, p3, p1), (p1, p3, p2)]
@@ -26,12 +30,14 @@ createInitialFaces epsilon points p0 p1 p2 p3 =
             in Face (v1, v2, v3) outside furthest
     in map createFace faces
 
+-- Process a face using Beneath-Beyond method described in Section 1: "The Beneath-Beyond Algorithm repeatedly adds a point to the convex hull of the previously processed points"
 processFace :: (Ord a, Floating a) => a -> Face a -> [V3 a] -> [(V3 a, V3 a, V3 a)]
 processFace epsilon face allPoints =
     case furthestPoint face of
         Nothing -> [vertices face]
         Just (p, _) -> 
             let (v1, v2, v3) = vertices face
+                -- Create cone of new faces (Section 1)
                 newFaces = [(v1, v2, p), (v2, v3, p), (v3, v1, p)]
                 remainingPoints = map fst $ filter ((/= p) . fst) $ outsideSet face
                 processNewFace (a, b, c) = 
@@ -42,6 +48,8 @@ processFace epsilon face allPoints =
                             in processNewFaceWithPoints epsilon outside furthest (a, b, c)
             in concatMap processNewFace newFaces
 
+
+-- Process new faces recursively with their outside sets
 processNewFaceWithPoints :: (Ord a, Floating a) => a -> [(V3 a, a)] -> (V3 a, a) -> (V3 a, V3 a, V3 a) -> [(V3 a, V3 a, V3 a)]
 processNewFaceWithPoints epsilon points furthest (a, b, c) =
     let (fp, _) = furthest
@@ -62,7 +70,8 @@ quickHull3 :: (Ord a, Floating a, Show a) => [V3 a] -> [V3 a]
 quickHull3 points 
     | length points < 4 = points
     | otherwise = 
-        let epsilon = 1e-8
+        let epsilon = 1e-8 -- Numerical tolerance from Section 4
+            -- Initial point selection as described in Section 2
             p0 = minimumBy (compare `on` (^._x)) points
             p1 = maximumBy (compare `on` distance p0) points
             rest1 = filter (\p -> p /= p0 && p /= p1) points
@@ -73,6 +82,7 @@ quickHull3 points
             allTriangles = concatMap (\f -> processFace epsilon f points) initialFaces
         in nub $ concatMap (\(a,b,c) -> [a,b,c]) allTriangles
 
+-- Parallel face processing based on Section 3's discussion of algorithm variations
 processPointsParallel :: (Ord a, Floating a, NFData a, Show a) => Int -> a -> [V3 a] -> Face a -> [(V3 a, V3 a, V3 a)]
 processPointsParallel depth epsilon points face =
     case furthestPoint face of
