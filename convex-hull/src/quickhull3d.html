@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Convex Hull Visualization</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background-color: white;
+            margin-top: 20px;
+        }
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .red-dot {
+            background-color: red;
+        }
+        .blue-dot {
+            background-color: blue;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-dot red-dot"></div>
+            <span>Hull Vertices</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot blue-dot"></div>
+            <span>Internal Points</span>
+        </div>
+    </div>
+
+    <script>
+        // All points
+        const allPoints = [
+            [0.44612219860395586, 0.10024096760627965, 0.6665741635118254],
+            [0.3356836031794034, 0.12020042820905796, 0.883851682719857],
+            [0.4695095237926513, 0.6850427486628374, 0.08911716201130515],
+            [0.4662282712761844, 0.8303516348432176, 0.7266906379169777],
+            [0.9715096520883156, 0.1335549547857504, 0.7470795872932073],
+            [0.5719528315866327, 0.5228164313195098, 0.33717473214192983],
+            [0.34886542352469097, 0.2802624411235959, 0.9769265700156771],
+            [0.6920979352922233, 0.46863427533211033, 0.3090381125286302],
+            [0.3155584463868707, 0.7756880395341031, 0.19021245800184672],
+            [0.8798948952287249, 0.21500819791140113, 0.1572850606231383],
+            [0.18923330612393252, 0.8435640687647541, 0.6984253362739208],
+            [0.2385873064701941, 0.09387850118046892, 0.9057866364119229],
+            [0.9276703757766338, 0.15106265868546787, 0.40360033486459246],
+            [0.13900848091808427, 0.609214799350861, 0.26091336574193913],
+            [0.8095441235741918, 0.29888318131378433, 0.40639077842876603]
+        ];
+
+        // Hull vertices
+        const hullVertices = [
+            [0.13900848091808427, 0.609214799350861, 0.26091336574193913],
+            [0.9715096520883156, 0.1335549547857504, 0.7470795872932073],
+            [0.4695095237926513, 0.6850427486628374, 0.08911716201130515],
+            [0.8798948952287249, 0.21500819791140113, 0.1572850606231383],
+            [0.6920979352922233, 0.46863427533211033, 0.3090381125286302],
+            [0.2385873064701941, 0.09387850118046892, 0.9057866364119229],
+            [0.44612219860395586, 0.10024096760627965, 0.6665741635118254],
+            [0.9276703757766338, 0.15106265868546787, 0.40360033486459246],
+            [0.18923330612393252, 0.8435640687647541, 0.6984253362739208],
+            [0.4662282712761844, 0.8303516348432176, 0.7266906379169777],
+            [0.34886542352469097, 0.2802624411235959, 0.9769265700156771],
+            [0.3155584463868707, 0.7756880395341031, 0.19021245800184672]
+        ];
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let rotation = 0;
+
+        // Project 3D point to 2D
+        function project(point, rotation) {
+            const scale = 400;
+            const [x, y, z] = point;
+            
+            // Rotate around Y axis
+            const rotatedX = x * Math.cos(rotation) - z * Math.sin(rotation);
+            const rotatedZ = x * Math.sin(rotation) + z * Math.cos(rotation);
+            
+            // Simple perspective projection
+            const distance = 4;
+            const perspective = distance / (distance + rotatedZ);
+            
+            return {
+                x: (rotatedX * perspective * scale) + 400,
+                y: (y * perspective * scale) + 300,
+                z: rotatedZ
+            };
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background grid
+            ctx.strokeStyle = '#eee';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Project all points
+            const projectedHull = hullVertices.map(p => project(p, rotation));
+            const projectedInternal = allPoints.filter(point => 
+                !hullVertices.some(hp => 
+                    hp[0] === point[0] && hp[1] === point[1] && hp[2] === point[2]
+                )
+            ).map(p => project(p, rotation));
+
+            // Draw hull edges
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < projectedHull.length; i++) {
+                for (let j = i + 1; j < projectedHull.length; j++) {
+                    const p1 = projectedHull[i];
+                    const p2 = projectedHull[j];
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+
+            // Draw hull vertices
+            ctx.fillStyle = '#ff0000';
+            projectedHull.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw internal points
+            ctx.fillStyle = '#0000ff';
+            projectedInternal.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Update rotation
+            rotation = (rotation + 0.01) % (Math.PI * 2);
+            requestAnimationFrame(draw);
+        }
+
+        // Start animation
+        draw();
+    </script>
+</body>
+</html>
