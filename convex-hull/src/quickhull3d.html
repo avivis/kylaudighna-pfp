@@ -90,6 +90,16 @@
             [0.3155584463868707, 0.7756880395341031, 0.19021245800184672]
         ];
 
+        // Generate triangular faces
+        const faces = [];
+        for (let i = 0; i < hullVertices.length - 2; i++) {
+            for (let j = i + 1; j < hullVertices.length - 1; j++) {
+                for (let k = j + 1; k < hullVertices.length; k++) {
+                    faces.push([i, j, k]);
+                }
+            }
+        }
+
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         let rotation = 0;
@@ -112,6 +122,11 @@
                 y: (y * perspective * scale) + 300,
                 z: rotatedZ
             };
+        }
+
+        function calculateFaceDepth(face, projectedPoints) {
+            const [i, j, k] = face;
+            return (projectedPoints[i].z + projectedPoints[j].z + projectedPoints[k].z) / 3;
         }
 
         function draw() {
@@ -138,6 +153,27 @@
                     hp[0] === point[0] && hp[1] === point[1] && hp[2] === point[2]
                 )
             ).map(p => project(p, rotation));
+
+            // Sort faces by depth
+            const facesWithDepth = faces.map(face => ({
+                face,
+                depth: calculateFaceDepth(face, projectedHull)
+            }));
+            facesWithDepth.sort((a, b) => a.depth - b.depth);
+
+            // Draw faces with transparency
+            ctx.globalAlpha = 0.2;
+            facesWithDepth.forEach(({ face }) => {
+                const [i, j, k] = face;
+                ctx.beginPath();
+                ctx.moveTo(projectedHull[i].x, projectedHull[i].y);
+                ctx.lineTo(projectedHull[j].x, projectedHull[j].y);
+                ctx.lineTo(projectedHull[k].x, projectedHull[k].y);
+                ctx.closePath();
+                ctx.fillStyle = '#ff6666';
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1.0;
 
             // Draw hull edges
             ctx.strokeStyle = '#ff0000';
