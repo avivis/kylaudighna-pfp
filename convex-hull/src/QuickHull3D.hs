@@ -8,6 +8,8 @@ import Linear.V3 (V3(..), cross)
 import Linear.Metric (dot, norm, distance)
 import Linear.V3 (R1(_x))
 
+-- https://www.cise.ufl.edu/~ungor/courses/fall06/papers/QuickHull.pdf
+
 -- Face representation as described in Section 1: "We represent a convex hull with a set of facets and a set of adjacency lists"
 data Face a = Face {vertices :: (V3 a, V3 a, V3 a), outsideSet :: [(V3 a, a)], furthestPoint :: Maybe (V3 a, a)}
 
