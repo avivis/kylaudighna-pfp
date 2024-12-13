@@ -16,7 +16,6 @@ def run_convex_hull_algorithm(num_points):
     Returns:
         tuple: List of all points, list of hull vertices
     """
-    # Assuming the Haskell executable is named 'convex-hull-exe'
     command = f"stack exec convex-hull-exe -- {num_points} quickHullPar 3d"
     
     try:
@@ -40,31 +39,40 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
         hull_vertices (list): List of convex hull vertices
         num_points (int): Number of points generated
     """
-    # HTML template with embedded JavaScript for visualization
     html_template = f"""<!DOCTYPE html>
 <html>
 <head>
     <title>3D Convex Hull Visualization</title>
     <style>
-        body {{
+        html, body {{
+            height: 100%;
+            margin: 0;
+            padding: 0;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
             background-color: #f0f0f0;
             font-family: Arial, sans-serif;
+        }}
+        .container {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
         }}
         canvas {{
             border: 1px solid #ccc;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             background-color: white;
-            margin-top: 20px;
+            margin-bottom: 20px;
         }}
         .legend {{
-            margin-top: 20px;
             display: flex;
             align-items: center;
             gap: 20px;
+            margin-bottom: 10px;
         }}
         .legend-item {{
             display: flex;
@@ -79,26 +87,27 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
         .red-dot {{ background-color: red; }}
         .blue-dot {{ background-color: blue; }}
         .info {{
-            margin-top: 10px;
             font-size: 14px;
             color: #666;
         }}
     </style>
 </head>
 <body>
-    <canvas id="canvas" width="800" height="600"></canvas>
-    <div class="legend">
-        <div class="legend-item">
-            <div class="legend-dot red-dot"></div>
-            <span>Hull Vertices</span>
+    <div class="container">
+        <canvas id="canvas" width="600" height="450"></canvas>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot red-dot"></div>
+                <span>Hull Vertices</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot blue-dot"></div>
+                <span>Internal Points</span>
+            </div>
         </div>
-        <div class="legend-item">
-            <div class="legend-dot blue-dot"></div>
-            <span>Internal Points</span>
+        <div class="info">
+            Total Points: {num_points} | Hull Vertices: {len(hull_vertices)}
         </div>
-    </div>
-    <div class="info">
-        Total Points: {num_points} | Hull Vertices: {len(hull_vertices)}
     </div>
 
     <script>
@@ -122,9 +131,37 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
         const ctx = canvas.getContext('2d');
         let rotation = 0;
 
+        // Normalize points to fit within a unit cube
+        function normalizePoints(points) {{
+            // Find min and max for each dimension
+            const mins = [
+                Math.min(...points.map(p => p[0])),
+                Math.min(...points.map(p => p[1])),
+                Math.min(...points.map(p => p[2]))
+            ];
+            const maxs = [
+                Math.max(...points.map(p => p[0])),
+                Math.max(...points.map(p => p[1])),
+                Math.max(...points.map(p => p[2]))
+            ];
+
+            // Calculate scale factors
+            const scales = maxs.map((max, i) => max - mins[i] || 1);
+            const maxScale = Math.max(...scales);
+
+            return points.map(point => 
+                point.map((coord, i) => (coord - mins[i]) / maxScale * 2 - 1)
+            );
+        }}
+
+        // Normalize points
+        const normalizedAllPoints = normalizePoints([...allPoints, ...hullVertices]);
+        const normalizedPoints = normalizedAllPoints.slice(0, allPoints.length);
+        const normalizedHull = normalizedAllPoints.slice(allPoints.length);
+
         // Project 3D point to 2D
         function project(point, rotation) {{
-            const scale = 400;
+            const scale = 250;
             const [x, y, z] = point;
             
             // Rotate around Y axis
@@ -132,12 +169,12 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
             const rotatedZ = x * Math.sin(rotation) + z * Math.cos(rotation);
             
             // Simple perspective projection
-            const distance = 4;
-            const perspective = distance / (distance + rotatedZ);
+            const distance = 3;
+            const perspective = distance / (distance + rotatedZ + 1);
             
             return {{
-                x: (rotatedX * perspective * scale) + 400,
-                y: (y * perspective * scale) + 300,
+                x: (rotatedX * perspective * scale) + 300,
+                y: (y * perspective * scale) + 400, 
                 z: rotatedZ
             }};
         }}
@@ -165,12 +202,8 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
             }}
 
             // Project all points
-            const projectedHull = hullVertices.map(p => project(p, rotation));
-            const projectedInternal = allPoints.filter(point => 
-                !hullVertices.some(hp => 
-                    hp[0] === point[0] && hp[1] === point[1] && hp[2] === point[2]
-                )
-            ).map(p => project(p, rotation));
+            const projectedHull = normalizedHull.map(p => project(p, rotation));
+            const projectedInternal = normalizedPoints.map(p => project(p, rotation));
 
             // Sort faces by depth
             const facesWithDepth = faces.map(face => ({{
@@ -215,11 +248,11 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
                 ctx.fill();
             }});
 
-            // Draw internal points
+            // Draw internal points with smaller size
             ctx.fillStyle = '#0000ff';
             projectedInternal.forEach(p => {{
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
                 ctx.fill();
             }});
 
