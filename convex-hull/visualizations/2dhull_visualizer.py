@@ -40,6 +40,7 @@ def run_convex_hull_algorithm(num_points, algorithm):
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = result.stdout
+        print(output)
     except Exception as e:
         print(f"Error running convex hull algorithm: {e}")
         return None, None
