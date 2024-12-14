@@ -11,8 +11,8 @@ import System.Random
 
 randomV2s :: (RandomGen g, Random a, Fractional a) => g -> [V2 a]
 randomV2s gen =
-  let (x, gen') = randomR (0.1, 1) gen
-      (y, gen'') = randomR (0.1, 1) gen'
+  let (x, gen') = randomR (0.05, 1) gen
+      (y, gen'') = randomR (0.05, 1) gen'
    in V2 x y : randomV2s gen''
 
 randomV3s :: (RandomGen g, Random a, Fractional a) => g -> [V3 a]
@@ -28,8 +28,8 @@ main = do
   case args of
     [numPointsString, algorithm, printFlag] -> do
       let n = read numPointsString :: Int
-          points2d = take n $ randomV2s (mkStdGen 3) :: [V2 Double]
-          points3d = take n $ randomV3s (mkStdGen 3) :: [V3 Double]
+          points2d = take n $ randomV2s (mkStdGen 5) :: [V2 Double]
+          points3d = take n $ randomV3s (mkStdGen 5) :: [V3 Double]
       case printFlag of
         "print" -> do
           putStrLn "Original points:"

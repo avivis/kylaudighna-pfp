@@ -46,8 +46,8 @@ def run_convex_hull_algorithm(num_points, algorithm):
 
     all_points = parse_points(output, "Original points")
     hull_vertices = parse_points(output, "Convex hull")
-    print(f"There are {len(hull_vertices)} hull vertices")
     return all_points, hull_vertices
+
 
 def generate_html_visualizer(all_points, hull_vertices, num_points):
     """
@@ -211,19 +211,17 @@ def plot_convex_hull(all_points, hull_vertices, algorithm):
         all_points (list): List of all generated points
         hull_vertices (list): List of convex hull vertices
     """
-    # Create a new figure
+
     plt.figure(figsize=(8, 8))
 
-    # Plot all points
     all_x, all_y = zip(*all_points)
     plt.scatter(all_x, all_y, color='blue', label='Internal Points', s=10)
 
-    # Plot hull vertices and connect them
-    hull_x, hull_y = zip(*hull_vertices + [hull_vertices[0]])  # Close the hull loop
+    hull_x, hull_y = zip(*hull_vertices + [hull_vertices[0]]) #close hull
     plt.plot(hull_x, hull_y, color='red', label='Convex Hull', linewidth=2)
     plt.scatter(hull_x[:-1], hull_y[:-1], color='red', label='Hull Vertices', s=30)
 
-    # Set axis limits and labels
+
     plt.xlim(0, 1.1)
     plt.ylim(0, 1.1)
     plt.xlabel("X-axis")
@@ -231,18 +229,14 @@ def plot_convex_hull(all_points, hull_vertices, algorithm):
     plt.title(f"{algorithm} 2D Convex Hull Visualization")
     plt.legend()
 
-    # Show grid for better readability
     plt.grid(color='gray', linestyle='--', linewidth=0.5, alpha=0.7)
 
-    # Adjust the bottom margin to make space for the text
     plt.subplots_adjust(bottom=0.15)
-
-    # Display the number of points and hull vertices at the bottom of the plot
     plt.figtext(0.5, 0.05, f"Total Points: {len(all_points)} | Hull Vertices: {len(hull_vertices)}",
                 ha="center", va="center", fontsize=12)
 
-    # Show the plot
     plt.show()
+
 
 algs = ["grahamScan", "quickHull2", "quickHull2Par", "chans", "chansPar"]
 
@@ -265,6 +259,7 @@ def main():
     all_points, hull_vertices = run_convex_hull_algorithm(num_points, algorithm)
     if all_points and hull_vertices:
         plot_convex_hull(all_points, hull_vertices, algorithm)
+
         # generated_file = generate_html_visualizer(all_points, hull_vertices, num_points)
         # webbrowser.open('file://' + os.path.realpath(generated_file))
 
