@@ -11,25 +11,35 @@ import System.Random
 
 randomV2s :: (RandomGen g, Random a, Fractional a) => g -> [V2 a]
 randomV2s gen =
-  let (x, gen') = randomR (0.1, 1) gen
-      (y, gen'') = randomR (0.1, 1) gen'
+  let (x, gen') = randomR (0, 1) gen
+      (y, gen'') = randomR (0, 1) gen'
    in V2 x y : randomV2s gen''
 
 randomV3s :: (RandomGen g, Random a, Fractional a) => g -> [V3 a]
 randomV3s gen =
   let (x, gen') = randomR (0, 1) gen
       (y, gen'') = randomR (0, 1) gen'
-      (z, gen''') = randomR (0.1, 1) gen''
+      (z, gen''') = randomR (0, 1) gen''
    in V3 x y z : randomV3s gen'''
 
 main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [numPointsString, algorithm] -> do
+    [numPointsString, algorithm, printFlag] -> do
       let n = read numPointsString :: Int
           points2d = take n $ randomV2s (mkStdGen 5) :: [V2 Double]
           points3d = take n $ randomV3s (mkStdGen 5) :: [V3 Double]
+      case printFlag of
+        "print" -> do
+          putStrLn "Original points:"
+          case algorithm of
+            "quickHull3" -> mapM_ print points3d
+            "quickHull3Par" -> mapM_ print points3d
+            _ -> mapM_ print points2d
+        "no-print" -> return ()
+        _ -> putStrLn "Invalid print flag, choose: print or no-print."
+      putStrLn "\nConvex hull:"
       case algorithm of
         "grahamScan" -> mapM_ print $ grahamScan points2d
         "quickHull2" -> mapM_ print $ quickHull2 points2d
@@ -39,4 +49,4 @@ main = do
         "quickHull3" -> mapM_ print $ quickHull3 points3d
         "quickHull3Par" -> mapM_ print $ quickHull3Par points3d
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull2, quickHullPar2, chans, chansPar, quickHull3, or quickHull3Par."
-    _ -> putStrLn "usage: convex-hull <numPoints> <algorithm>"
+    _ -> putStrLn "usage: convex-hull <numPoints> <algorithm> <print-flag>"
