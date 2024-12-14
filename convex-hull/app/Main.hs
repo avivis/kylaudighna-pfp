@@ -28,8 +28,8 @@ main = do
   case args of
     [numPointsString, algorithm] -> do
       let n = read numPointsString :: Int
-          points2d = take n $ randomV2s (mkStdGen 3) :: [V2 Double]
-          points3d = take n $ randomV3s (mkStdGen 3) :: [V3 Double]
+          points2d = take n $ randomV2s (mkStdGen 5) :: [V2 Double]
+          points3d = take n $ randomV3s (mkStdGen 5) :: [V3 Double]
       case algorithm of
         "grahamScan" -> mapM_ print $ grahamScan points2d
         "quickHull2" -> mapM_ print $ quickHull2 points2d
