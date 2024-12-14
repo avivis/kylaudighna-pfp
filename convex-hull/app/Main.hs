@@ -9,17 +9,17 @@ import Chans (chans2, chans2Par)
 import System.Environment (getArgs)
 import System.Random
 
-randomV2s :: (RandomGen g, Random a) => g -> [V2 a]
+randomV2s :: (RandomGen g, Random a, Fractional a) => g -> [V2 a]
 randomV2s gen =
-  let (x, gen') = random gen
-      (y, gen'') = random gen'
+  let (x, gen') = randomR (0, 1) gen
+      (y, gen'') = randomR (0, 1) gen'
    in V2 x y : randomV2s gen''
 
-randomV3s :: (RandomGen g, Random a) => g -> [V3 a]
+randomV3s :: (RandomGen g, Random a, Fractional a) => g -> [V3 a]
 randomV3s gen =
-  let (x, gen') = random gen
-      (y, gen'') = random gen'
-      (z, gen''') = random gen''
+  let (x, gen') = randomR (0, 1) gen
+      (y, gen'') = randomR (0, 1) gen'
+      (z, gen''') = randomR (0.1, 1) gen''
    in V3 x y z : randomV3s gen'''
 
 printPoints :: Show a => [a] -> IO ()
@@ -37,7 +37,7 @@ main = do
       putStrLn $ "generating " ++ show numPoints ++ " points..."
       case dimension of
         "2d" -> do
-          let points = take numPoints $ randomV2s (mkStdGen 3) :: [V2 Double]
+          let points = take numPoints $ randomV2s (mkStdGen 7) :: [V2 Double]
           putStrLn "running 2D algorithm..."
           case algorithm of
             "grahamScan" -> print $ grahamScan points
@@ -47,7 +47,7 @@ main = do
             "chansPar" -> print $ chans2Par numPoints points
             _ -> putStrLn "invalid algorithm"
         "3d" -> do
-          let points = take numPoints $ randomV3s (mkStdGen 3) :: [V3 Double]
+          let points = take numPoints $ randomV3s (mkStdGen 7) :: [V3 Double]
           printPoints points
           putStrLn "running 3D algorithm..."
           case algorithm of
