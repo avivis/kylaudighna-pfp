@@ -26,10 +26,20 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
-    [numPointsString, algorithm] -> do
+    [numPointsString, algorithm, printFlag] -> do
       let n = read numPointsString :: Int
           points2d = take n $ randomV2s (mkStdGen 3) :: [V2 Double]
           points3d = take n $ randomV3s (mkStdGen 3) :: [V3 Double]
+      case printFlag of
+        "print" -> do
+          putStrLn "Original points:"
+          case algorithm of
+            "quickHull3" -> mapM_ print points3d
+            "quickHull3Par" -> mapM_ print points3d
+            _ -> mapM_ print points2d
+        "no-print" -> return ()
+        _ -> putStrLn "Invalid print flag, choose: print or no-print."
+      putStrLn "\nConvex hull:"
       case algorithm of
         "grahamScan" -> mapM_ print $ grahamScan points2d
         "quickHull2" -> mapM_ print $ quickHull2 points2d
