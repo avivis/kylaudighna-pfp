@@ -7,7 +7,6 @@ import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Linear.V2 (R1 (_x), R2 (_y), V2, crossZ)
 
--- TODO: Handle collinear points (>=0, filter out p0)
 
 quickHull2_ :: (Ord a, Num a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
 quickHull2_ points p0 p1 =
@@ -31,15 +30,14 @@ quickHull2 points =
       minXPoint = minimumBy (compare `on` (^. _x)) points
    in quickHull2_ points minXPoint maxXPoint ++ quickHull2_ points maxXPoint minXPoint
 
--- Min X, min y, max X and max Y points all have to be part of the convex hull, so I do a 4-way
--- parallel approach here
+
 quickHull2Par :: (Num a, Ord a, NFData a) => [V2 a] -> [V2 a]
 quickHull2Par [] = []
 quickHull2Par p@[_] = p
 quickHull2Par p@[_, _] = p
 quickHull2Par p@[_, _, _] = p
 quickHull2Par points =
-  let maxDepth = 100 -- TODO: How do we determine maxDepth?
+  let maxDepth = 100
       _quickHull2Par :: (Num a, Ord a, NFData a) => Int -> [V2 a] -> (V2 a, V2 a) -> [V2 a]
       _quickHull2Par d ps (p0, p1)
         | null onLeft = [p0]
@@ -62,4 +60,3 @@ quickHull2Par points =
       bottomLeft = (minYPoint, minXPoint)
    in concat (map (_quickHull2Par 1 points) [topLeft, topRight, bottomRight, bottomLeft] `using` parList rdeepseq)
 
--- -- The cross product of (p1 - p0) and (p2 - p0) should be positive!

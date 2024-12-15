@@ -83,7 +83,7 @@ chans2Par n ps = _chans2Par start
  where
   m = 3 * (floor . sqrtDouble . fromIntegral) n
   subPoints = chunksOf m ps
-  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (quickHull2 . V.fromList) subPoints) -- TODO: Play around with making this quickHull2Par, I found it was about the same speed
+  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (quickHull2 . V.fromList) subPoints)
   start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
   _chans2Par p =
     let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
