@@ -306,7 +306,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
     return filename
 
 def main():
-    num_points = random.randint(10, 50)
+    num_points = random.randint(10, 30)
     all_points, hull_vertices = run_convex_hull_algorithm(num_points)
     if all_points and hull_vertices:
         generated_file = generate_html_visualizer(all_points, hull_vertices, num_points)
