@@ -6,6 +6,24 @@ import webbrowser
 import random
 from datetime import datetime
 
+def parse_points(output, label):
+    """Extracts points from the given labeled section of the output."""
+    match = re.search(f"{label}:\\n(.*?)(?:\\n\\n|$)", output, re.DOTALL)
+    if not match:
+        raise ValueError(f"Could not find the {label} section in the output.")
+
+    points_str = match.group(1).strip()
+    points = []
+
+    for line in points_str.split("\n"):
+        _, sX, sY, sZ = line.split()
+        x = float(sX)
+        y = float(sY)
+        z = float(sZ)
+        points.append((x, y, z))
+
+    return points
+
 def run_convex_hull_algorithm(num_points):
     """
     Run the convex hull algorithm and capture its output.
@@ -16,19 +34,20 @@ def run_convex_hull_algorithm(num_points):
     Returns:
         tuple: List of all points, list of hull vertices
     """
-    command = f"stack exec convex-hull-exe -- {num_points} quickHullPar 3d"
+
+
+    command = f"stack run {num_points} quickHull3 print --rts-options \"-ls -N11 -s\""
     
     try:
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         output = result.stdout
+        print(output)
     except Exception as e:
         print(f"Error running convex hull algorithm: {e}")
         return None, None
-    
-    all_points_match = re.findall(r'V3 ([\d.-]+) ([\d.-]+) ([\d.-]+)', output)
-    all_points = [list(map(float, point)) for point in all_points_match]
-    hull_match = re.findall(r'V3 ([\d.-]+) ([\d.-]+) ([\d.-]+)', output.split('Found')[1].split(']')[0])
-    hull_vertices = [list(map(float, vertex)) for vertex in hull_match]
+
+    all_points = parse_points(output, "Original points")
+    hull_vertices = parse_points(output, "Convex hull")
     return all_points, hull_vertices
 
 def generate_html_visualizer(all_points, hull_vertices, num_points):
