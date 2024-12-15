@@ -196,7 +196,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
             
             return {
                 x: (rotatedX * perspective * scale) + 300,
-                y: (y * perspective * scale) + 400, 
+                y: (y * perspective * scale) + 225, 
                 z: rotatedZ
             };
         }
