@@ -78,7 +78,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 600px;
+            max-width: 800px;
         }
         canvas {
             border: 1px solid #ccc;
@@ -125,7 +125,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
 </head>
 <body>
     <div class="container">
-        <canvas id="canvas" width="600" height="450"></canvas>
+        <canvas id="canvas" width="800" height="600"></canvas>
         <div class="legend">
             <div class="legend-item">
                 <div class="legend-shape"><div class="circle"></div></div>
@@ -185,14 +185,14 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
         const normalizedHull = normalizedAllPoints.slice(allPoints.length);
 
         function project(point, rotation) {
-            const scale = 250;
+            const scale = 350; // Increased scale for larger view
             const [x, y, z] = point;
             
             const rotatedX = x * Math.cos(rotation) - z * Math.sin(rotation);
             const rotatedZ = x * Math.sin(rotation) + z * Math.cos(rotation);
             
             const distance = 3;
-            const perspective = distance / (distance + rotatedZ + 1);
+            const perspective = distance / (distance + rotatedZ + 1 + 2);
             
             return {
                 x: (rotatedX * perspective * scale) + 300,
@@ -242,7 +242,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
             facesWithDepth.sort((a, b) => a.depth - b.depth);
 
             // Draw faces with increased transparency
-            ctx.globalAlpha = 0.08;  // Made more transparent
+            ctx.globalAlpha = 0.08; // Made more transparent
             facesWithDepth.forEach((faceData) => {
                 const [i, j, k] = faceData.faceIndices;
                 ctx.beginPath();
@@ -255,7 +255,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
             });
 
             // Draw hull edges with transparency
-            ctx.globalAlpha = 0.04;  // Made more transparent
+            ctx.globalAlpha = 0.04; // Made more transparent
             ctx.strokeStyle = '#ff0000';
             ctx.lineWidth = 2;
             for (let i = 0; i < projectedHull.length; i++) {
@@ -269,22 +269,22 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
                 }
             }
 
-            // Draw internal points as rotated squares with depth-based size
+            // Draw internal points as with depth-based size
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = '#0000ff';
             projectedInternal.forEach(p => {
-                const baseSize = 12;
-                const sizeModifier = (p.z + 1) / 2;
-                const size = baseSize * sizeModifier;
-                drawSquare(ctx, p.x, p.y, size);
+                const size = 3;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, size, 0, Math.PI * 2); // Draw circle for internal points
+                ctx.fill();
             });
 
-            // Draw hull vertices as more transparent circles
-            ctx.globalAlpha = 0.4;  // Made more transparent
-            ctx.fillStyle = '#ff0000';
+            // Draw hull vertices as opaque red circles
+            ctx.globalAlpha = 0.8; // Less transparent for better visibility
+            ctx.fillStyle = '#ff0000'; // Explicit red color for hull points
             projectedHull.forEach(p => {
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); // Circle with radius 6
                 ctx.fill();
             });
 
@@ -296,7 +296,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
     </script>
 </body>
 </html>'''
-    
+
     os.makedirs('convex_hull_visualizations', exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f'convex_hull_visualizations/convex_hull_viz_{timestamp}.html'
@@ -306,7 +306,7 @@ def generate_html_visualizer(all_points, hull_vertices, num_points):
     return filename
 
 def main():
-    num_points = random.randint(10, 100)
+    num_points = random.randint(13, 25)
     all_points, hull_vertices = run_convex_hull_algorithm(num_points)
     if all_points and hull_vertices:
         generated_file = generate_html_visualizer(all_points, hull_vertices, num_points)
