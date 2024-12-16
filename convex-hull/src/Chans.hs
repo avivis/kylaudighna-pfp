@@ -1,7 +1,7 @@
 module Chans (jarvisMarch, chans2, chans2Par) where
 
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (NFData, parBuffer, rdeepseq, withStrategy)
+import Control.Parallel.Strategies (NFData, parBuffer, rdeepseq, using)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Data.List.Split (chunksOf)
@@ -22,28 +22,34 @@ jarvisMarch points = _jarvisMarch start
     let next = (minimumBy (orientation p) . filter (/= p)) points
      in if next == start then [p] else p : _jarvisMarch next
 
--- Special vectorized version of quickHull, since with sub-chunks it's fairly cheap to create the smaller sub-point vectors
+chansJarvisMarch :: (Num a, Ord a) => [V.Vector (V2 a)] -> V2 a -> V2 a -> [V2 a]
+chansJarvisMarch subHulls start p =
+  let next = maximumBy (orientation p) $ map (rightmostPoint p) subHulls
+    in if next == start then [p] else p : chansJarvisMarch subHulls start next
+
+-- Special vectorized version of quickHull, since with sub-chunks it's fairly cheap to create the smaller sub-point vectors, and iterating through those vectors is easier
 quickHull2 :: (Ord a, Num a) => V.Vector (V2 a) -> V.Vector (V2 a)
 quickHull2 points =
   let
     _quickHull2 :: (Num a, Ord a) => V.Vector (V2 a) -> V2 a -> V2 a -> V.Vector (V2 a)
     _quickHull2 ps p0 p1
-      | null ps = V.singleton p1
+      | V.null ps = V.singleton p1
       | otherwise = _quickHull2 onRight pm p1 V.++ _quickHull2 onLeft p0 pm
      where
-      pm = maximumBy (compare `on` distFromLine2 p0 p1) ps
-      (onLeft, onRightOrCenter) = V.partition ((> 0) . distFromLine2 p0 pm) ps
-      onRight = V.filter ((> 0) . distFromLine2 pm p1) onRightOrCenter
+      pm = V.maximumOn (distFromLine2 p0 p1) ps
+      (onLeft, maybeOnRight) = V.partition ((> 0) . distFromLine2 p0 pm) ps
+      onRight = V.filter ((> 0) . distFromLine2 pm p1) maybeOnRight
 
-    pXMax = maximum points
-    pXMin = minimum points
+    pXMin = V.minimumOn (^. _x) points
+    pXMax = V.maximumOn (^. _x) points
 
     (topPoints, bottomPoints) = V.partition ((> 0) . distFromLine2 pXMin pXMax) points
-   in
-    if length points < 4 then points else _quickHull2 bottomPoints pXMax pXMin V.++ _quickHull2 topPoints pXMin pXMax
 
-leftmostPoint :: (Ord a, Num a) => V2 a -> V.Vector (V2 a) -> V2 a
-leftmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
+  in if V.length points < 4 then points else _quickHull2 topPoints pXMin pXMax V.++ _quickHull2 bottomPoints pXMax pXMin
+
+
+rightmostPoint :: (Ord a, Num a) => V2 a -> V.Vector (V2 a) -> V2 a
+rightmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
  where
   compareAdjacent i = (prev, next)
    where
@@ -56,8 +62,8 @@ leftmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
   binarySearch l r lPrevOri lNextOri
     -- If we can't reach anymore points, we'll do l
     | l >= r = l
-    -- If o->m->m-1 is not a CCW turn, and o->m->m+1 is a CCW turn, we are at the rightmost point!
-    | mPrevOri /= LT && mNextOri == GT = m
+    -- If o->m->m-1 is not a CCW turn, and o->m->m+1 is not CCW turn, we are at the rightmost point!
+    | mPrevOri /= LT && mNextOri /= LT = m
     -- If o->l->m is a CCW turn and (o->l->l+1 is a CW turn or o->l->l-1 and o->l->l+1 turn the same way), or o->l->m is a CW turn and o->m->m-1 is a CW turn, then search to the right of m (from l to m)
     | mLOri == GT && (lNextOri == LT || lPrevOri == lNextOri) || mLOri == LT && mPrevOri == LT = binarySearch l m lPrevOri lNextOri
     -- Otherwise, search to the left of m (from m+1 to r) (new lPrev = -mNext, new lNext needs to be set manually)
@@ -68,23 +74,17 @@ leftmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
     (mPrevOri, mNextOri) = compareAdjacent m -- What are the orientations of o->m->m-1 and o->m->m+1?
 
 chans2 :: (Ord a, Num a) => Int -> [V2 a] -> [V2 a]
-chans2 n ps = _chans2 start
+chans2 n ps = chansJarvisMarch subHulls start start
  where
   m = 3 * (floor . sqrtDouble . fromIntegral) n -- 3 * sqrt(A) is a good approximation of the perimeter of a polygon with area A
   subPoints = chunksOf m ps
   subHulls = map (quickHull2 . V.fromList) subPoints
-  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
-  _chans2 p =
-    let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
-     in if next == start then [p] else p : _chans2 next
+  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls
 
 chans2Par :: (Ord a, Num a, NFData a) => Int -> [V2 a] -> [V2 a]
-chans2Par n ps = _chans2Par start
+chans2Par n ps = chansJarvisMarch subHulls start start
  where
   m = 3 * (floor . sqrtDouble . fromIntegral) n
   subPoints = chunksOf m ps
-  subHulls = withStrategy (parBuffer 32 rdeepseq) (map (quickHull2 . V.fromList) subPoints)
-  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls -- Point across all hulls with lowest X
-  _chans2Par p =
-    let next = maximumBy (orientation p) $ map (leftmostPoint p . V.filter (/= p)) subHulls
-     in if next == start then [p] else p : _chans2Par next
+  subHulls = map (quickHull2 . V.fromList) subPoints `using` parBuffer 32 rdeepseq
+  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls

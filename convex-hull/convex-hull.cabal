@@ -29,6 +29,7 @@ library
       GrahamScan
       Lib
       QuickHull
+      QuickHull3D
   other-modules:
       Paths_convex_hull
   autogen-modules:

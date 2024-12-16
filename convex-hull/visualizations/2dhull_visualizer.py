@@ -84,7 +84,7 @@ def plot_convex_hull(all_points, hull_vertices, algorithm):
     plt.show()
 
 
-algs = ["grahamScan", "quickHull2", "quickHull2Par", "chans", "chansPar"]
+algs = ["grahamScan", "quickHull2", "quickHull2Par", "chans2", "chans2Par"]
 
 def main():
     if len(sys.argv) == 0:

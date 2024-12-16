@@ -28,8 +28,8 @@ main = do
   case args of
     [numPointsString, algorithm, printFlag] -> do
       let n = read numPointsString :: Int
-          points2d = take n $ randomV2s (mkStdGen 5) :: [V2 Double]
-          points3d = take n $ randomV3s (mkStdGen 8) :: [V3 Double]
+          points2d = take n $ randomV2s (mkStdGen 3) :: [V2 Double]
+          points3d = take n $ randomV3s (mkStdGen 4) :: [V3 Double]
       case printFlag of
         "print" -> do
           putStrLn "Original points:"
@@ -44,8 +44,8 @@ main = do
         "grahamScan" -> mapM_ print $ grahamScan points2d
         "quickHull2" -> mapM_ print $ quickHull2 points2d
         "quickHull2Par" -> mapM_ print $ quickHull2Par points2d
-        "chans" -> mapM_ print $ chans2 n points2d
-        "chansPar" ->  mapM_ print $ chans2Par n points2d
+        "chans2" -> mapM_ print $ chans2 n points2d
+        "chans2Par" ->  mapM_ print $ chans2Par n points2d
         "quickHull3" -> mapM_ print $ quickHull3 points3d
         "quickHull3Par" -> mapM_ print $ quickHull3Par points3d
         _ -> putStrLn "Invalid algorithm, choose: grahamScan, quickHull2, quickHullPar2, chans, chansPar, quickHull3, or quickHull3Par."
