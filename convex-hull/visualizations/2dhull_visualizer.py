@@ -49,161 +49,6 @@ def run_convex_hull_algorithm(num_points, algorithm):
     hull_vertices = parse_points(output, "Convex hull")
     return all_points, hull_vertices
 
-
-def generate_html_visualizer(all_points, hull_vertices, num_points):
-    """
-    Generate an HTML file with a 2D Convex Hull visualization.
-    Args:
-        all_points (list): List of all generated points
-        hull_vertices (list): List of convex hull vertices
-        num_points (int): Number of points generated
-    """
-    html_template = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>2D Convex Hull Visualization</title>
-    <style>
-        html, body {{
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
-            font-family: Arial, sans-serif;
-        }}
-        .container {{
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 600px;
-        }}
-        canvas {{
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            background-color: white;
-            margin-bottom: 20px;
-        }}
-        .legend {{
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 10px;
-        }}
-        .legend-item {{
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }}
-        .legend-dot {{
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }}
-        .red-dot {{ background-color: red; }}
-        .blue-dot {{ background-color: blue; }}
-        .info {{
-            font-size: 14px;
-            color: #666;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <canvas id="canvas" width="600" height="450"></canvas>
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-dot red-dot"></div>
-                <span>Hull Vertices</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-dot blue-dot"></div>
-                <span>Internal Points</span>
-            </div>
-        </div>
-        <div class="info">
-            Total Points: {num_points} | Hull Vertices: {len(hull_vertices)}
-        </div>
-    </div>
-
-    <script>
-        // All points
-        const allPoints = {json.dumps(all_points)};
-
-        // Hull vertices
-        const hullVertices = {json.dumps(hull_vertices)};
-
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-
-        // Normalize points to fit within the canvas
-        function normalizePoints(points) {{
-            const mins = [
-                Math.min(...points.map(p => p[0])),
-                Math.min(...points.map(p => p[1]))
-            ];
-            const maxs = [
-                Math.max(...points.map(p => p[0])),
-                Math.max(...points.map(p => p[1]))
-            ];
-            const scales = maxs.map((max, i) => max - mins[i] || 1);
-            return points.map(point => [
-                ((point[0] - mins[0]) / scales[0]) * 580 + 10,
-                ((point[1] - mins[1]) / scales[1]) * 430 + 10
-            ]);
-        }}
-
-        const normalizedAllPoints = normalizePoints(allPoints);
-        const normalizedHull = normalizePoints(hullVertices);
-
-        function draw() {{
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw internal points
-            ctx.fillStyle = '#0000ff';
-            normalizedAllPoints.forEach(p => {{
-                ctx.beginPath();
-                ctx.arc(p[0], p[1], 3, 0, Math.PI * 2);
-                ctx.fill();
-            }});
-
-            // Draw hull edges
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            normalizedHull.forEach((p, i) => {{
-                const next = normalizedHull[(i + 1) % normalizedHull.length];
-                ctx.moveTo(p[0], p[1]);
-                ctx.lineTo(next[0], next[1]);
-            }});
-            ctx.stroke();
-
-            // Draw hull vertices
-            ctx.fillStyle = '#ff0000';
-            normalizedHull.forEach(p => {{
-                ctx.beginPath();
-                ctx.arc(p[0], p[1], 6, 0, Math.PI * 2);
-                ctx.fill();
-            }});
-        }}
-
-        // Initial draw
-        draw();
-    </script>
-</body>
-</html>"""
-    
-    os.makedirs('convex_hull_visualizations', exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f'convex_hull_visualizations/convex_hull_viz_2d_{timestamp}.html'
-    with open(filename, 'w') as f:
-        f.write(html_template)
-    print(f"Visualization saved to {filename}")
-    return filename
-
 def plot_convex_hull(all_points, hull_vertices, algorithm):
     """
     Plot the points and the convex hull on a graph with labeled axes.
@@ -254,15 +99,11 @@ def main():
     if (len(sys.argv) == 3):
         num_points = int(sys.argv[2])
     else:
-        num_points = random.randint(10, 100)
-    
+        num_points = random.randint(15, 100)
    
     all_points, hull_vertices = run_convex_hull_algorithm(num_points, algorithm)
     if all_points and hull_vertices:
         plot_convex_hull(all_points, hull_vertices, algorithm)
-
-        # generated_file = generate_html_visualizer(all_points, hull_vertices, num_points)
-        # webbrowser.open('file://' + os.path.realpath(generated_file))
 
 if __name__ == "__main__":
     main()
