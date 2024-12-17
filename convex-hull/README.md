@@ -12,7 +12,7 @@ All commands should be run from the `convex-hull/` directory.
 
 ## How to run: ##
 
-```stack run <num-points> <algorithm> <print-flag> --rts-options "-s -N<number-cores> -ls"```
+```stack run <num-points> <algorithm> <print-flag> --rts-options "-s -A64M -N<number-cores> -ls"```
 
 The options for 2D algorithms are: `grahamScan`, `quickHull2`, `quickHull2Par`, `chans`, and `chansPar`.
 The 3D options are: `quickHull3` and `quickHull3Par`.
