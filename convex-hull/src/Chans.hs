@@ -7,7 +7,8 @@ import Data.List (maximumBy, minimumBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Vector as V
 import GHC.Float (sqrtDouble)
-import Lib (distFromLine2, orientation)
+import Lib (orientation)
+import QuickHull (quickHull2)
 import Linear.V2 (R1 (_x), V2)
 
 jarvisMarch :: (Ord a, Num a) => [V2 a] -> [V2 a]
@@ -26,27 +27,6 @@ chansJarvisMarch :: (Num a, Ord a) => [V.Vector (V2 a)] -> V2 a -> V2 a -> [V2 a
 chansJarvisMarch subHulls start p =
   let next = maximumBy (orientation p) $ map (rightmostPoint p) subHulls
     in if next == start then [p] else p : chansJarvisMarch subHulls start next
-
--- Special vectorized version of quickHull, since with sub-chunks it's fairly cheap to create the smaller sub-point vectors, and iterating through those vectors is easier
-quickHull2 :: (Ord a, Num a) => V.Vector (V2 a) -> V.Vector (V2 a)
-quickHull2 points =
-  let
-    _quickHull2 :: (Num a, Ord a) => V.Vector (V2 a) -> V2 a -> V2 a -> V.Vector (V2 a)
-    _quickHull2 ps p0 p1
-      | V.null ps = V.singleton p1
-      | otherwise = _quickHull2 onRight pm p1 V.++ _quickHull2 onLeft p0 pm
-     where
-      pm = V.maximumOn (distFromLine2 p0 p1) ps
-      (onLeft, maybeOnRight) = V.partition ((> 0) . distFromLine2 p0 pm) ps
-      onRight = V.filter ((> 0) . distFromLine2 pm p1) maybeOnRight
-
-    pXMin = V.minimumOn (^. _x) points
-    pXMax = V.maximumOn (^. _x) points
-
-    (topPoints, bottomPoints) = V.partition ((> 0) . distFromLine2 pXMin pXMax) points
-
-  in if V.length points < 4 then points else _quickHull2 topPoints pXMin pXMax V.++ _quickHull2 bottomPoints pXMax pXMin
-
 
 rightmostPoint :: (Ord a, Num a) => V2 a -> V.Vector (V2 a) -> V2 a
 rightmostPoint o ps = ps V.! binarySearch 0 (V.length ps - 1) lPrevInit lNextInit
@@ -78,13 +58,13 @@ chans2 n ps = chansJarvisMarch subHulls start start
  where
   m = 3 * (floor . sqrtDouble . fromIntegral) n -- 3 * sqrt(A) is a good approximation of the perimeter of a polygon with area A
   subPoints = chunksOf m ps
-  subHulls = map (quickHull2 . V.fromList) subPoints
-  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls
+  subHulls = map (V.force . V.fromList . quickHull2) subPoints -- force means we save on space
+  start = minimumBy (compare `on` (^. _x)) $ map (V.minimumOn (^. _x)) subHulls
 
 chans2Par :: (Ord a, Num a, NFData a) => Int -> [V2 a] -> [V2 a]
 chans2Par n ps = chansJarvisMarch subHulls start start
  where
   m = 3 * (floor . sqrtDouble . fromIntegral) n
   subPoints = chunksOf m ps
-  subHulls = map (quickHull2 . V.fromList) subPoints `using` parBuffer 32 rdeepseq
-  start = minimumBy (compare `on` (^. _x)) $ map (minimumBy (compare `on` (^. _x))) subHulls
+  subHulls = map (V.force . V.fromList . quickHull2) subPoints `using` parBuffer 32 rdeepseq -- Here's the parallelization
+  start = minimumBy (compare `on` (^. _x)) $ map (V.minimumOn (^. _x)) subHulls

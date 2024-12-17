@@ -31,8 +31,8 @@ quickHull2 points =
   let
     _quickHull2 :: (Num a, Ord a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
     _quickHull2 ps p0 p1
-      | null ps = p0 : ps
-      | otherwise = _quickHull2 onLeft p0 pm ++ _quickHull2 onRight pm p1
+      | null ps = [p1]
+      | otherwise =  _quickHull2 onRight pm p1 ++ _quickHull2 onLeft p0 pm
      where
       pm = maximumBy (compare `on` distFromLine2 p0 p1) ps
       (onLeft, maybeOnRight) = partition ((> 0) . distFromLine2 p0 pm) ps
