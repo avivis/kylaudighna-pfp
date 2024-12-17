@@ -14,7 +14,7 @@ All commands should be run from the `convex-hull/` directory.
 
 ```stack run <num-points> <algorithm> <print-flag> --rts-options "-s -A64M -N<number-cores> -ls"```
 
-The options for 2D algorithms are: `grahamScan`, `quickHull2`, `quickHull2Par`, `chans`, and `chansPar`.
+The options for 2D algorithms are: `grahamScan`, `quickHull2`, `quickHull2Par`, `chans2`, and `chans2Par`.
 The 3D options are: `quickHull3` and `quickHull3Par`.
 
 The options for `<print-flag>` are either `print` or `no-print`, which will determine whether the initial generated points are printed. You should usually have this set to `no-print` to avoid excessive output.
