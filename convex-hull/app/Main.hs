@@ -29,7 +29,7 @@ main = do
     [numPointsString, algorithm, printFlag] -> do
       let n = read numPointsString :: Int
           points2d = take n $ randomV2s (mkStdGen 3) :: [V2 Double]
-          points3d = take n $ randomV3s (mkStdGen 4) :: [V3 Double]
+          points3d = take n $ randomV3s (mkStdGen 8) :: [V3 Double]
       case printFlag of
         "print" -> do
           putStrLn "Original points:"
