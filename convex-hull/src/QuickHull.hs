@@ -8,23 +8,6 @@ import Data.List (maximumBy, minimumBy, partition)
 import Linear.V2 (R1 (_x), R2 (_y), V2)
 import Lib(distFromLine2)
 
--- TODO: Is this version faster for you? It's the exact same algorithm, in theory it's less efficient
--- quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
--- quickHull2 points =
---   let
---     _quickHull2 :: (Num a, Ord a) => [V2 a] -> V2 a -> V2 a -> [V2 a]
---     _quickHull2 ps p0 p1
---       | (null . drop 1) onLeft = p0 : onLeft
---       | otherwise = _quickHull2 onLeft p0 pm ++ _quickHull2 onLeft pm p1
---      where
---       onLeftDists = (filter ((> 0) . snd) . map (\p -> (p, distFromLine2 p0 p1 p))) ps
---       onLeft = map fst onLeftDists
---       pm = (fst . maximumBy (compare `on` snd)) onLeftDists
---
---     pXMin = minimumBy (compare `on` (^. _x)) points
---     pXMax = maximumBy (compare `on` (^. _x)) points
---
---   in if (null . drop 3) points then points else _quickHull2 points pXMin pXMax ++ _quickHull2 points pXMax pXMin
 
 quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
 quickHull2 points =
