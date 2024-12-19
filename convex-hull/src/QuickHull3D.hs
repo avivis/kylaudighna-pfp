@@ -1,12 +1,10 @@
 module QuickHull3D (quickHull3, quickHull3Par) where
-import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (parList, rdeepseq, using)
+import Control.Parallel.Strategies (NFData, using, parList, rdeepseq)
 import Data.Function (on)
-import Data.List (maximumBy, minimumBy, nub, partition)
-import Linear.V3 (V3(..), cross)
+import Data.List (maximumBy, minimumBy, nub)
+import Linear.V3 (V3(..), cross, R1 (_x))
 import Linear.Metric (dot, norm, distance)
-import Linear.V3 (R1(_x))
 
 -- https://www.cise.ufl.edu/~ungor/courses/fall06/papers/QuickHull.pdf
 
@@ -15,7 +13,7 @@ data Face a = Face {vertices :: (V3 a, V3 a, V3 a), outsideSet :: [(V3 a, a)], f
 
 -- Based on geometric orientation test described in Section 2: Signed volume calculation for determining if point is above face
 signedVolume :: Floating a => V3 a -> V3 a -> V3 a -> V3 a -> a
-signedVolume a b c d = dot (cross (b - a) (c - a)) (d - a) / 6.0
+signedVolume a b c = dot (cross (b - a) (c - a)) . subtract a
 
 -- find points above a plane with distance, implementing the "outside set" concept from Section 2: "A point is in a facet's outside set only if it is above the facet"
 findPointsAbove :: (Ord a, Floating a) => a -> V3 a -> V3 a -> V3 a -> [V3 a] -> [(V3 a, a)]
@@ -33,8 +31,8 @@ createInitialFaces epsilon points p0 p1 p2 p3 =
     in map createFace faces
 
 -- Process a face using Beneath-Beyond method described in Section 1: "The Beneath-Beyond Algorithm repeatedly adds a point to the convex hull of the previously processed points"
-processFace :: (Ord a, Floating a) => a -> Face a -> [V3 a] -> [(V3 a, V3 a, V3 a)]
-processFace epsilon face allPoints =
+processFace :: (Ord a, Floating a) => a -> Face a -> [(V3 a, V3 a, V3 a)]
+processFace epsilon face =
     case furthestPoint face of
         Nothing -> [vertices face]
         Just (p, _) -> 
@@ -68,7 +66,7 @@ processNewFaceWithPoints epsilon points furthest (a, b, c) =
             in concatMap processSubFace newFaces
 
 -- Sequential
-quickHull3 :: (Ord a, Floating a, Show a) => [V3 a] -> [V3 a]
+quickHull3 :: (Ord a, Floating a) => [V3 a] -> [V3 a]
 quickHull3 points 
     | length points < 4 = points
     | otherwise = 
@@ -78,14 +76,14 @@ quickHull3 points
             p1 = maximumBy (compare `on` distance p0) points
             rest1 = filter (\p -> p /= p0 && p /= p1) points
             p2 = maximumBy (compare `on` \p -> norm (cross (p1 - p0) (p - p0))) rest1
-            rest2 = filter (\p -> p /= p2) rest1
+            rest2 = filter (/= p2) rest1
             p3 = maximumBy (compare `on` \p -> abs $ signedVolume p0 p1 p2 p) rest2
             initialFaces = createInitialFaces epsilon points p0 p1 p2 p3
-            allTriangles = concatMap (\f -> processFace epsilon f points) initialFaces
+            allTriangles = concatMap (processFace epsilon) initialFaces
         in nub $ concatMap (\(a,b,c) -> [a,b,c]) allTriangles
 
 -- Parallel face processing based on Section 3's discussion of algorithm variations
-processPointsParallel :: (Ord a, Floating a, NFData a, Show a) => Int -> a -> [V3 a] -> Face a -> [(V3 a, V3 a, V3 a)]
+processPointsParallel :: (Ord a, Floating a, NFData a) => Int -> a -> [V3 a] -> Face a -> [(V3 a, V3 a, V3 a)]
 processPointsParallel depth epsilon points face =
     case furthestPoint face of
         Nothing -> [vertices face]
@@ -100,13 +98,13 @@ processPointsParallel depth epsilon points face =
                                                       else Just $ maximumBy (compare `on` snd) outside)
                     in if depth < 50
                        then processPointsParallel (depth + 1) epsilon points newFace
-                       else processFace epsilon newFace points
+                       else processFace epsilon newFace
             in if depth < 2
                then concat (map processNewFace newFaces `using` parList rdeepseq)
                else concatMap processNewFace newFaces
 
 -- Parallel
-quickHull3Par :: (Ord a, Floating a, NFData a, Show a) => [V3 a] -> [V3 a]
+quickHull3Par :: (Ord a, Floating a, NFData a) => [V3 a] -> [V3 a]
 quickHull3Par points 
     | length points < 4 = points
     | otherwise = 
@@ -115,7 +113,7 @@ quickHull3Par points
             p1 = maximumBy (compare `on` distance p0) points
             rest1 = filter (\p -> p /= p0 && p /= p1) points
             p2 = maximumBy (compare `on` \p -> norm (cross (p1 - p0) (p - p0))) rest1
-            rest2 = filter (\p -> p /= p2) rest1
+            rest2 = filter (/= p2) rest1
             p3 = maximumBy (compare `on` \p -> abs $ signedVolume p0 p1 p2 p) rest2
             initialFaces = createInitialFaces epsilon points p0 p1 p2 p3
             allTriangles = concat (map (processPointsParallel 0 epsilon points) initialFaces `using` parList rdeepseq)

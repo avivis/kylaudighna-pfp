@@ -20,6 +20,7 @@ The 3D options are: `quickHull3` and `quickHull3Par`.
 The options for `<print-flag>` are either `print` or `no-print`, which will determine whether the initial generated points are printed. You should usually have this set to `no-print` to avoid excessive output.
 
 The `-s` and `ls` flags in `--rts-options` are not necessary unless you want to time or view the activity log on Threadscope, respectively.
+The `-A64M` flag increases the size of the nursery to 64MB. Passing this in is recommended, but not mandatory.
 
 ## How to run visualizations: ##
 

@@ -1,7 +1,7 @@
 module Chans (jarvisMarch, chans2, chans2Par) where
 
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (NFData, parBuffer, rdeepseq, using)
+import Control.Parallel.Strategies (NFData, using, parBuffer, rdeepseq)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy)
 import Data.List.Split (chunksOf)

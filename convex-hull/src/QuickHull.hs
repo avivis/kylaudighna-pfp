@@ -2,12 +2,11 @@ module QuickHull (quickHull2, quickHull2Par) where
 
 import Control.DeepSeq (NFData)
 import Control.Lens ((^.))
-import Control.Parallel.Strategies (parList, rdeepseq, using)
+import Control.Parallel.Strategies (using, parList, rdeepseq)
 import Data.Function (on)
 import Data.List (maximumBy, minimumBy, partition)
 import Linear.V2 (R1 (_x), R2 (_y), V2)
 import Lib(distFromLine2)
-
 
 quickHull2 :: (Ord a, Num a) => [V2 a] -> [V2 a]
 quickHull2 points =
